@@ -26,6 +26,7 @@ class OrchardMap():
         self.tree_combos = tree_combos
         # main orchard map and a copy of the original
         self.orchard_map = np.zeros((self.row_height + self.top_buffer + self.bottom_buffer, len(row_description)))
+        self.checklist = self.create_checklist()
         self.original_map = None
 
     def create_map(self, agents: list = None) -> None:
@@ -111,6 +112,23 @@ class OrchardMap():
             self.orchard_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
             self.orchard_map[goal[0]][goal[1]] = agent_id
 
+    def create_checklist(self):
+        # creates a checklist containing all of the x,y location of trees to compare at the end of a timestep
+        tree_checklist = []
+        for i in range(np.shape(self.orchard_map)[0]):
+            for j in range(len(self.row_description)):
+                if j != -10 or j != -20:
+                    tree_checklist.append([i, j])
+        tree_checklist.reverse()
+        return np.array(tree_checklist)
+
+    def check_complete(self):
+        # Checks if all trees have had their action sequence completed
+        for i in self.checklist:
+            if self.orchard_map[i[0]][i[1]] != -10:
+                return False
+        return True
+
     def reset_map(self, agents: list):
         # resets the map back to original state
         self.orchard_map = np.zeros((self.row_height + self.top_buffer + self.bottom_buffer, len(self.row_description)))
@@ -166,7 +184,7 @@ class OrchardSim():
                         i.cur_pose = move
 
                     # if we are at max timestep increment episode and reset
-                    if tsteps >= self.tsep_max:
+                    if tsteps >= self.tsep_max or self.map.check_complete():
                         print("EPISODE : " + str(eps) + " COMPLETE")
                         # if we are at max episode then quit
                         if eps >= self.ep_max:

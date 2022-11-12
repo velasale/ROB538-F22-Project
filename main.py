@@ -33,7 +33,7 @@ def large_orchard():
         row_height=10, row_description=large_row32, top_buffer=3, bottom_buffer=2,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
-    test = orchard.OrchardSim(orchard_map=large_orchard, agents=agent_list, tstep_max=500, ep_max=5)
+    test = orchard.OrchardSim(orchard_map=large_orchard, agents=agent_list, tstep_max=100, ep_max=5)
     test.run_gui()
     # To run without GUI (Way faster)
     # test.run()

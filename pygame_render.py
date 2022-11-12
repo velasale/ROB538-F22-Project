@@ -97,11 +97,12 @@ class PygameRender():
             pygame.display.update()
 
             # if we are at max timestep increment episode and reset
-            if tsteps >= max_tstep:
+            if tsteps >= max_tstep or self.map.check_complete():
                 print("EPISODE : " + str(eps) + " COMPLETE")
                 # if we are at max episode then quit
                 if eps >= max_ep:
                     pygame.quit()
+                    return
                 # reset tsteps
                 tsteps = 0
                 # reset the agents and the map
