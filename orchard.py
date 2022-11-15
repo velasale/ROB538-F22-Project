@@ -131,10 +131,13 @@ class OrchardMap():
 
     def reset_map(self, agents: list):
         # resets the map back to original state
-        self.orchard_map = np.zeros((self.row_height + self.top_buffer + self.bottom_buffer, len(self.row_description)))
-        self.original_map = np.zeros(
-            (self.row_height + self.top_buffer + self.bottom_buffer, len(self.row_description)))
-        self.create_map(agents)
+        self.orchard_map = np.copy(self.original_map)
+        # respawns the agents
+        start = (len(self.row_description) // 2) - (len(agents) // 2)
+        for i in range(len(agents)):
+            self.orchard_map[0][start + i] = agents[i].robot_class
+            # sets the start pose of agents and the ids
+            agents[i].cur_pose = [0, start + i]
 
 
 class OrchardSim():
