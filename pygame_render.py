@@ -2,6 +2,7 @@ import pygame
 import numpy as np
 import time
 import orchard_agents
+import matplotlib.pyplot as plt
 
 BLACK = (0, 0, 0)  # BACKGROUND
 WHITE = (255, 255, 255)  # BACKGROUND
@@ -49,6 +50,8 @@ class PygameRender():
         # display
         pygame.display.set_caption("ORCHARD")
 
+        self.reward_flag = 0
+
     def start(self, agents: list, max_ep: int, max_tstep: int):
         #tsteps and episodes
         tsteps = 0
@@ -66,6 +69,7 @@ class PygameRender():
 
             # main control loop for all agents
             for i in agents:
+
                 # get valid moves for agent
                 valid_moves, valid_keys = self.map.get_valid_moves(i.cur_pose, i.action_type)
                 # if we have a valid move continue
@@ -79,15 +83,41 @@ class PygameRender():
                             if j.id == j.comms_channel:
                                 # gets map from other agent
                                 i.recieve_communication(j.send_communication())
+
                     # Agent chooses move doesnt do anything yet
+                    # print("Valid moves and valid keys are: ", valid_moves, valid_keys)
+
+                    # --- Step 1: Take next action ---
+                    # a - Observe next state
                     move, key = i.choose_move(points, vals, valid_moves, valid_keys)
+
+                    # b. Observe reward
+                    reward = self.map.reward_map[move[0]][move[1]]
+
+                    # --- Step 2: Choose A_prime from S_prime
+                    valid_moves_prime, valid_keys_prime = self.map.get_valid_moves(move, i.action_type)
+                    move_2, key_2 = i.choose_move(points, vals, valid_moves_prime, valid_keys_prime)
+
+                    # --- Step 3: Update Q_sa_values of the agent
+                    i.update_value(move, move_2, reward)
+                    i.accumulated_reward = i.accumulated_reward + reward
+
+                    if reward == 10:
+                        # Tree found!
+                        self.reward_flag = 1
+
                     # REMOVE RANDOM MOVE ONCE CHOOSE MOVE IMPLEMENTED ONLY FOR DEMO
-                    move, key = i.random_move(valid_moves, valid_keys)
+                    # print(i.action_type)
+                    # move, key = i.random_move(valid_moves, valid_keys)
                     # update our map with our action choice
                     self.map.update_map(i.cur_pose, move, key, i.id)
                     # if we moved from a spot we need to update the agents internal current position
                     if key != "interact":
                         i.cur_pose = move
+
+                # Update epsilon
+                i.epsilon = i.epsilon * 0.999
+                # print(i.epsilon)
 
             # draws everything
             self.draw_grid()
@@ -97,7 +127,10 @@ class PygameRender():
             pygame.display.update()
 
             # if we are at max timestep increment episode and reset
-            if tsteps >= max_tstep or self.map.check_complete():
+            if tsteps >= max_tstep or self.map.check_complete() or self.reward_flag == 1:
+
+                self.reward_flag = 0
+
                 print("EPISODE : " + str(eps) + " COMPLETE")
                 # if we are at max episode then quit
                 if eps >= max_ep:
@@ -109,11 +142,22 @@ class PygameRender():
                 for i in agents:
                     i.reset_agent()
                 self.map.reset_map(agents)
+
+                print(i.accumulated_reward)
+                i.accumulated_reward = 0
+
                 eps += 1
             # increment timestep
             tsteps += 1
         # quits
         pygame.quit()
+
+        fig = plt.figure()
+        plt.plot(rewards_evolution)
+        fig = plt.figure()
+        plt.imshow(i.q_sa_table)
+        plt.colorbar()
+        plt.show()
 
     def draw_grid(self):
         # draw background
