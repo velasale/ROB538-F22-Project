@@ -1,7 +1,7 @@
 import numpy as np
 import pygame_render
-import copy
-import orchard_agents
+# import copy
+# import orchard_agents
 
 
 class OrchardMap():
@@ -26,8 +26,14 @@ class OrchardMap():
         self.tree_combos = tree_combos
         # main orchard map and a copy of the original
         self.orchard_map = np.zeros((self.row_height + self.top_buffer + self.bottom_buffer, len(row_description)))
+        print(self.orchard_map.shape)
         self.checklist = self.create_checklist()
         self.original_map = None
+        self.picked_apples = 0
+        self.pruned_trees = 0
+        self.rewards = []
+        self.episode_rewards = []
+        self.timestep = 0
 
     def create_map(self, agents: list = None) -> None:
         # Change every row except for buffer rows to the row_description
@@ -104,13 +110,23 @@ class OrchardMap():
         return valid_moves, valid_keys
 
     def update_map(self, start: list, goal: list, key: str, agent_id: int) -> None:
+        self.timestep += 1
+        
         if key == "interact":
+            # print('interacted at timestep', self.timestep, start, goal)
             # if we interact we update the action sequence to the next step of the goal area
+            # print(self.orchard_map[goal[0]][goal[1]])
+            # print(self.action_sequence[self.orchard_map[goal[0]][goal[1]]])
             self.orchard_map[goal[0]][goal[1]] = self.action_sequence[self.orchard_map[goal[0]][goal[1]]]
+            # print(self.orchard_map[goal[0]][goal[1]])
+            self.episode_rewards.append(1)
+            return 10
         else:
             # if we move we change our previous location back to the original and update our id location
             self.orchard_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
             self.orchard_map[goal[0]][goal[1]] = agent_id
+            self.episode_rewards.append(0)
+            return -1
 
     def create_checklist(self):
         # creates a checklist containing all of the x,y location of trees to compare at the end of a timestep
@@ -131,7 +147,11 @@ class OrchardMap():
 
     def reset_map(self, agents: list):
         # resets the map back to original state
+        print(f'picked {max(self.episode_rewards)} apples this episode')
         self.orchard_map = np.copy(self.original_map)
+        self.rewards.append(self.episode_rewards)
+        self.episode_rewards = []
+        self.timestep=0
         # respawns the agents
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         for i in range(len(agents)):
@@ -139,8 +159,7 @@ class OrchardMap():
             # sets the start pose of agents and the ids
             agents[i].cur_pose = [0, start + i]
 
-
-class OrchardSim():
+class DiscreteOrchardSim():
 
     def __init__(self, orchard_map: OrchardMap, agents: list, tstep_max: int, ep_max: int) -> None:
         # driver
@@ -150,6 +169,7 @@ class OrchardSim():
         self.tsep_max = tstep_max
         self.ep_max = ep_max
         self.render = None
+        
 
     def run_gui(self):
         # runs gui
@@ -162,10 +182,13 @@ class OrchardSim():
         eps = 0
         while True:
             # main control loop for all agents
+            # print(self.map.orchard_map)
             for i in self.agents:
                 # get valid moves for agent
                 valid_moves, valid_keys = self.map.get_valid_moves(i.cur_pose, i.action_type)
+                # print(self.map.orchard_map)
                 # if we have a valid move continue
+                # print(valid_keys)
                 if len(valid_keys) > 0:
                     # get the surrounding area with sensors
                     points, vals = self.map.get_surroundings(i.cur_pose, 3)
@@ -177,16 +200,96 @@ class OrchardSim():
                                 # gets map from other agent
                                 i.recieve_communication(j.send_communication())
                     # Agent chooses move doesnt do anything yet
-                    move, key = i.choose_move(points, vals, valid_moves, valid_keys)
+                    start_pos = i.cur_pose.copy()
+                    move, key = i.choose_move(points, vals, valid_moves, valid_keys, start_pos)
+                    # print(key)
                     # REMOVE RANDOM MOVE ONCE CHOOSE MOVE IMPLEMENTED ONLY FOR DEMO
-                    move, key = i.random_move(valid_moves, valid_keys)
+                    # move, key = i.random_move(valid_moves, valid_keys)
                     # update our map with our action choice
-                    self.map.update_map(i.cur_pose, move, key, i.id)
+                    reward = self.map.update_map(i.cur_pose, move, key, i.id)
+                    # print(i.cur_pose)
                     # if we moved from a spot we need to update the agents internal current position
                     if key != "interact":
                         i.cur_pose = move
-
+                    next_points, next_vals = self.map.get_surroundings(i.cur_pose, 3)
+                    i.policy.train(points, vals, start_pos, key, reward, next_points, next_vals, i.cur_pose.copy())
                     # if we are at max timestep increment episode and reset
+                    i.update_epsilon()
+                    if tsteps >= self.tsep_max or self.map.check_complete():
+                        print("EPISODE : " + str(eps) + " COMPLETE")
+                        # if we are at max episode then quit
+                        if eps >= self.ep_max:
+                            return
+                        # reset tsteps
+                        tsteps = 0
+                        # reset the agents and the map
+                        for i in self.agents:
+                            i.reset_agent()
+                        self.map.reset_map(self.agents)
+                        eps += 1
+                    # increment timestep
+                    tsteps += 1
+
+
+class OrchardSim():
+
+    def __init__(self, orchard_map: OrchardMap, agents: list, tstep_max: int, ep_max: int) -> None:
+        # driver
+        self.map = orchard_map
+        self.agents = agents
+        self.map.create_map(self.agents)
+        self.tsep_max = tstep_max
+        self.ep_max = ep_max
+        self.render = None
+        
+
+    def run_gui(self):
+        # runs gui
+        self.render = pygame_render.PygameRender(self.map)
+        self.render.start(self.agents, self.ep_max, self.tsep_max)
+
+    def run(self):
+        # UNTESTED
+        tsteps = 0
+        eps = 0
+        while True:
+            # main control loop for all agents
+            # print(self.map.orchard_map)
+            for i in self.agents:
+                # get valid moves for agent
+                valid_moves, valid_keys = self.map.get_valid_moves(i.cur_pose, i.action_type)
+                # print(self.map.orchard_map)
+                # if we have a valid move continue
+                # print(valid_keys)
+                if len(valid_keys) > 0:
+                    # get the surrounding area with sensors
+                    points, vals = self.map.get_surroundings(i.cur_pose, 10)
+                    i.apply_sensor(points,vals,tsteps+1)
+                    # if internal channel is set we want to communicate
+                    if i.comms_channel != None:
+                        # finds the agent we want to communicate with
+                        for j in self.agents:
+                            if j.id == j.comms_channel:
+                                # gets map from other agent
+                                i.recieve_communication(j.send_communication())
+                    # Agent chooses move doesnt do anything yet
+                    start_pos = i.cur_pose.copy()
+                    move, key, actions = i.choose_move(points, vals, valid_moves, valid_keys, start_pos)
+                    # print(key)
+                    # REMOVE RANDOM MOVE ONCE CHOOSE MOVE IMPLEMENTED ONLY FOR DEMO
+                    # move, key = i.random_move(valid_moves, valid_keys)
+                    # update our map with our action choice
+                    reward = self.map.update_map(i.cur_pose, move, key, i.id)
+                    # print(i.cur_pose)
+                    # if we moved from a spot we need to update the agents internal current position
+                    if key != "interact":
+                        i.cur_pose = move
+                    next_points, next_vals = self.map.get_surroundings(i.cur_pose, 3)
+                    i.apply_sensor(next_points, next_vals,tsteps+1.5)
+                    i.update_buffer(actions, reward)
+                    i.policy.train()
+                    # if we are at max timestep increment episode and reset
+                    i.update_epsilon()
                     if tsteps >= self.tsep_max or self.map.check_complete():
                         print("EPISODE : " + str(eps) + " COMPLETE")
                         # if we are at max episode then quit
