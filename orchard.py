@@ -8,7 +8,7 @@ class OrchardMap():
 
     def __init__(self, row_height: int, row_description: list, top_buffer: int,
                  bottom_buffer: int, action_sequence: list,
-                 action_map: list, tree_prob: list, tree_combos: list) -> None:
+                 action_map: list, tree_prob: list, tree_combos: list, num_classes: int) -> None:
         # how long are the rows
         self.row_height = row_height
         self.row_description = row_description
@@ -28,6 +28,10 @@ class OrchardMap():
         self.orchard_map = np.zeros((self.row_height + self.top_buffer + self.bottom_buffer, len(row_description)))
         self.checklist = self.create_checklist()
         self.original_map = None
+        self.num_clases = num_classes
+        self.action_areas = None
+        self.num_completed = 0
+        self.area_expectations = None
 
     def create_map(self, agents: list = None) -> None:
         # Change every row except for buffer rows to the row_description
@@ -41,6 +45,7 @@ class OrchardMap():
                     self.orchard_map[i][j] = self.row_description[j]
         # Take a copy of the original map (used in update method)
         self.original_map = np.copy(self.orchard_map)
+        self.create_area_expectations()
         # Spawn the agents at the top center of the map LENGTH NEEDS TO BE LONGER THAN NUMBER OF AGENTS
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         for i in range(len(agents)):
@@ -106,21 +111,55 @@ class OrchardMap():
     def update_map(self, start: list, goal: list, key: str, agent_id: int) -> None:
         if key == "interact":
             # if we interact we update the action sequence to the next step of the goal area
-            self.orchard_map[goal[0]][goal[1]] = self.action_sequence[self.orchard_map[goal[0]][goal[1]]]
-        else:
-            # if we move we change our previous location back to the original and update our id location
             self.orchard_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
             self.orchard_map[goal[0]][goal[1]] = agent_id
+            if self.orchard_map[goal[0]][goal[1]+1] == -10 or self.orchard_map[goal[0]][goal[1]-1] == -10:
+                return
+            elif self.orchard_map[goal[0]][goal[1]+1] in self.action_map.keys() and self.orchard_map[goal[0]][goal[1]+1] == 1:
+                self.orchard_map[goal[0]][goal[1]+1] = self.action_sequence[self.orchard_map[goal[0]][goal[1]+1]]
+                self.update_expectations(goal)
+                self.num_completed += 1
+            elif self.orchard_map[goal[0]][goal[1]-1] in self.action_map.keys() and self.orchard_map[goal[0]][goal[1]-1] == 1:
+                self.orchard_map[goal[0]][goal[1]-1] = self.action_sequence[self.orchard_map[goal[0]][goal[1]-1]]
+                self.update_expectations(goal)
+                self.num_completed += 1
+            else:
+                return
 
     def create_checklist(self):
         # creates a checklist containing all of the x,y location of trees to compare at the end of a timestep
         tree_checklist = []
         for i in range(np.shape(self.orchard_map)[0]):
             for j in range(len(self.row_description)):
-                if j != -10 or j != -20:
+                if self.orchard_map[i][j] != -10 or self.orchard_map[i][j] != -20:
                     tree_checklist.append([i, j])
         tree_checklist.reverse()
         return np.array(tree_checklist)
+
+    def update_expectations(self, origin):
+        for i in range(len(self.action_areas)):
+            if self.action_areas[i][0] == origin[0] and self.action_areas[i][1] == origin[1]:
+                self.area_expectations[i] = 0
+
+    def get_area_expectations(self):
+        return self.action_areas, self.area_expectations
+
+    def calculate_global_reward(self):
+
+        return np.array([self.num_completed * 50])
+
+    def create_area_expectations(self):
+        action_areas = []
+        expectations = []
+        for i in range(np.shape(self.orchard_map)[0]):
+            for j in range(len(self.row_description)):
+                if self.orchard_map[i][j] == -20:
+                    action_areas.append([i, j])
+                    expectations.append(.6)
+        print(action_areas)
+        print(len(action_areas))
+        self.action_areas = np.array(action_areas)
+        self.area_expectations = np.array(expectations)
 
     def check_complete(self):
         # Checks if all trees have had their action sequence completed
@@ -131,6 +170,7 @@ class OrchardMap():
 
     def reset_map(self, agents: list):
         # resets the map back to original state
+        self.num_completed = 0
         self.orchard_map = np.copy(self.original_map)
         # respawns the agents
         start = (len(self.row_description) // 2) - (len(agents) // 2)
