@@ -12,7 +12,7 @@ small_row8 = [0, 0, -20, -10, -10, -20, 0, 0]
 
 
 # action flow ( ex: 3 -> 2 -> -10(done) )
-default_action_sequence = {1: -10, 2: -10, 3: 2, 4: 1}
+default_action_sequence = {1: -10, 2: -10, 3: 2, 4: 1, -10: -10}
 # Action mappings, A pruner with action type 1 can do action sequences 1 or 3
 default_action_map = {1: 1, 2: 2, 3: 1, 4: 2}
 # probability for each tree to have an action sequence
@@ -26,11 +26,11 @@ default_prob = [0.5, 0.5, 0]
 default_tree_combos = [1, 2, -10]
 
 # Design A:
-small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0]
+# small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0]
 
 # Design A:
 # tstep = 500, episodes = 5000, epsilon = 0.99
-# small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
+small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
 # small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, -20, -10, -10, -20, 0, 0]
 
 
@@ -61,11 +61,11 @@ def small_orchard():
     # Grid parameters
     top_buffer = 2
     bottom_buffer = 2
-    row_height = 2
+    row_height = 4
 
     # Algorithm parameters
     time_steps = 500
-    episodes = 2000
+    episodes = 1000
 
     # Create Orchard
     small_orchard = orchard.OrchardMap(
@@ -77,10 +77,10 @@ def small_orchard():
     rows = row_height + top_buffer + bottom_buffer
     cols = len(small_row8)
     agent_list = []
-    for i in range(1):
+    for i in range(4):
         a = orchard_agents.AgentPick(rows, cols)
         agent_list.append(a)
-    for i in range(1):
+    for i in range(4):
         a = orchard_agents.AgentPrune(rows, cols)
         agent_list.append(a)
 

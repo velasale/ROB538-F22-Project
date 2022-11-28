@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+# TODO improve Global Reward formula
+
 
 def local_rewards(agents, map):
     """
@@ -142,7 +144,6 @@ def diff_rewards(agents, map):
         global_reward += i.reward
 
     for i in agents:
-
         # Obtain the Counterfactual reward
         others_reward = 0
         for j in agents:
@@ -180,7 +181,7 @@ def plot_reward(rewards_evolution: list, i):
     """
     fig = plt.figure()
     average_data = []
-    window = 30
+    window = 50
     color = 'blue'
 
     # Step 1: Obtain the moving average window
