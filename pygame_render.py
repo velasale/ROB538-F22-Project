@@ -3,6 +3,7 @@ import numpy as np
 import time
 import orchard_agents
 import matplotlib.pyplot as plt
+import table_learning as tl
 
 BLACK = (0, 0, 0)  # BACKGROUND
 WHITE = (255, 255, 255)  # BACKGROUND
@@ -57,9 +58,11 @@ class PygameRender():
         tsteps = 0
         eps = 0
         done = False
+        rewards_evolution = []
         # sets clock
         clock = pygame.time.Clock()
         # loops forever until exit
+
         while not done:
             # 30fps
             clock.tick(30)
@@ -67,70 +70,23 @@ class PygameRender():
                 if event.type == pygame.QUIT:  # If user clicked close
                     done = True  # Flag that we are done so we exit this loop
 
-            # main control loop for all agents
-            for i in agents:
+            # Reset map reward every episode
+            self.map.create_reward_map()
 
-                # get valid moves for agent
-                valid_moves, valid_keys = self.map.get_valid_moves(i.cur_pose, i.action_type)
-                # if we have a valid move continue
-                if len(valid_keys) > 0:
-                    # get the surrounding area with sensors
-                    points, vals = self.map.get_surroundings(i.cur_pose, 3)
-                    # if internal channel is set we want to communicate
-                    if i.comms_channel != None:
-                        # finds the agent we want to communicate with
-                        for j in agents:
-                            if j.id == j.comms_channel:
-                                # gets map from other agent
-                                i.recieve_communication(j.send_communication())
-
-                    # Agent chooses move doesnt do anything yet
-                    # print("Valid moves and valid keys are: ", valid_moves, valid_keys)
-
-                    # --- Step 1: Take next action ---
-                    # a - Observe next state
-                    move, key = i.choose_move(points, vals, valid_moves, valid_keys)
-
-                    # b. Observe reward
-                    reward = self.map.reward_map[move[0]][move[1]]
-
-                    # --- Step 2: Choose A_prime from S_prime
-                    valid_moves_prime, valid_keys_prime = self.map.get_valid_moves(move, i.action_type)
-                    move_2, key_2 = i.choose_move(points, vals, valid_moves_prime, valid_keys_prime)
-
-                    # --- Step 3: Update Q_sa_values of the agent
-                    i.update_value(move, move_2, reward)
-                    i.accumulated_reward = i.accumulated_reward + reward
-
-                    if reward == 10:
-                        # Tree found!
-                        self.reward_flag = 1
-
-                    # REMOVE RANDOM MOVE ONCE CHOOSE MOVE IMPLEMENTED ONLY FOR DEMO
-                    # print(i.action_type)
-                    # move, key = i.random_move(valid_moves, valid_keys)
-                    # update our map with our action choice
-                    self.map.update_map(i.cur_pose, move, key, i.id)
-                    # if we moved from a spot we need to update the agents internal current position
-                    if key != "interact":
-                        i.cur_pose = move
-
-                # Update epsilon
-                i.epsilon = i.epsilon * 0.999
-                # print(i.epsilon)
+            # Learn
+            agents, self.map = tl.local_rewards(agents, self.map)
+            # self.agents, self.map = tl.global_rewards(self.agents, self.map, tsteps)
+            # self.agents, self.map = tl.diff_rewards(self.agents, self.map, tsteps)
 
             # draws everything
             self.draw_grid()
             # sleep to make it less fast, can take out if you want it sped up
-            # time.sleep(.1)
+            # time.sleep(.4)
             # updates display
             pygame.display.update()
 
             # if we are at max timestep increment episode and reset
-            if tsteps >= max_tstep or self.map.check_complete() or self.reward_flag == 1:
-
-                self.reward_flag = 0
-
+            if tsteps >= max_tstep or self.map.check_complete():
                 print("EPISODE : " + str(eps) + " COMPLETE")
                 # if we are at max episode then quit
                 if eps >= max_ep:
@@ -140,24 +96,17 @@ class PygameRender():
                 tsteps = 0
                 # reset the agents and the map
                 for i in agents:
+                    i.reward_evolution.append(i.accumulated_reward)
+                    print(i.accumulated_reward)
                     i.reset_agent()
                 self.map.reset_map(agents)
-
-                print(i.accumulated_reward)
-                i.accumulated_reward = 0
-
+                # Reset map reward
+                self.map.create_reward_map()
                 eps += 1
             # increment timestep
             tsteps += 1
-        # quits
-        pygame.quit()
 
-        fig = plt.figure()
-        plt.plot(rewards_evolution)
-        fig = plt.figure()
-        plt.imshow(i.q_sa_table)
-        plt.colorbar()
-        plt.show()
+        pygame.quit()
 
     def draw_grid(self):
         # draw background
@@ -176,7 +125,7 @@ class PygameRender():
                     color = BLUE
                 # If agent with ID in the pruner robot range make square blue
                 if self.map.orchard_map[i][j] >= 200 and self.map.orchard_map[i][j] < 300:
-                    color = PURPLE
+                    color = YELLOW
                 # If nothing in square make square blue
                 if self.map.orchard_map[i][j] == 0:
                     color = WHITE

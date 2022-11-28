@@ -1,7 +1,11 @@
 import numpy as np
 import pygame_render
+import table_learning as tl
 import copy
 import orchard_agents
+import matplotlib.pyplot as plt
+import random
+from tqdm import tqdm
 
 
 class OrchardMap():
@@ -26,8 +30,26 @@ class OrchardMap():
         self.tree_combos = tree_combos
         # main orchard map and a copy of the original
         self.orchard_map = np.zeros((self.row_height + self.top_buffer + self.bottom_buffer, len(row_description)))
-        self.checklist = self.create_checklist()
+        self.checklist = None
         self.original_map = None
+
+        # Alejo's code: reward map
+        self.reward_map = -1 * np.ones((self.row_height + self.top_buffer + self.bottom_buffer, len(row_description)))
+
+    def create_reward_map(self):
+        # Alejo's code
+        for i in range(self.top_buffer, len(self.orchard_map) - self.bottom_buffer):
+            for j in range(len(self.row_description)):
+                # If there is a tree we assign a random weighted action sequence to that tree and put in the representation
+                if self.row_description[j] == -10:
+
+                    # REWARD MAP
+                    if self.orchard_map[i][j] == 1:
+                        self.reward_map[i][j] = 10
+
+                    # REWARD MAP
+                    if self.orchard_map[i][j] == 2:
+                        self.reward_map[i][j] = 10
 
     def create_map(self, agents: list = None) -> None:
         # Change every row except for buffer rows to the row_description
@@ -36,18 +58,26 @@ class OrchardMap():
                 # If there is a tree we assign a random weighted action sequence to that tree and put in the representation
                 if self.row_description[j] == -10:
                     self.orchard_map[i][j] = np.random.choice(self.tree_combos, 1, p=self.tree_prob)
+
                 # otherwise continue
                 else:
                     self.orchard_map[i][j] = self.row_description[j]
         # Take a copy of the original map (used in update method)
         self.original_map = np.copy(self.orchard_map)
+        self.checklist = self.create_checklist()
         # Spawn the agents at the top center of the map LENGTH NEEDS TO BE LONGER THAN NUMBER OF AGENTS
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         for i in range(len(agents)):
-            self.orchard_map[0][start + i] = agents[i].robot_class
             # sets the start pose of agents and the ids
-            agents[i].cur_pose = [0, start + i]
+            # self.orchard_map[0][start + i] = agents[i].robot_class
+            # agents[i].cur_pose = [0, start + i]
+
             agents[i].id = agents[i].robot_class + i
+
+            # Alejo's modifications (random spawn)
+            col = random.randrange(0, len(self.row_description))
+            self.orchard_map[0][col] = agents[i].robot_class
+            agents[i].cur_pose = [0, col]
 
     def get_surroundings(self, start: list, sight_length: int):
         # Gets the sight_length x sight_length area around the agent
@@ -64,26 +94,26 @@ class OrchardMap():
                 values.append(self.orchard_map[i][j])
         return np.array(points), np.array(values)
 
-    def get_valid_moves(self, start: list, action_type: int):
+    def get_valid_moves(self, start: list, action_type: int, agent_id: int):
         # Finds all the valid moves for a given agent
         valid_moves = []
         valid_keys = []
         # Is down valid
         if start[0] < self.row_height + self.top_buffer + self.bottom_buffer - 1:
             down = self.orchard_map[start[0]+1, start[1]]
-            if down == 0 or down == -20:
+            if down == 0 or down == -20 or down == agent_id:
                 valid_moves.append([start[0]+1, start[1]])
                 valid_keys.append("down")
         # Is up valid
         if start[0] > 0:
             up = self.orchard_map[start[0]-1, start[1]]
-            if up == 0 or up == -20:
+            if up == 0 or up == -20 or up == agent_id:
                 valid_moves.append([start[0]-1, start[1]])
                 valid_keys.append("up")
         # Is right valid
         if start[1] < len(self.row_description)-1:
             right = self.orchard_map[start[0], start[1]+1]
-            if right == 0 or right == -20:
+            if right == 0 or right == -20 or right == agent_id:
                 valid_moves.append([start[0], start[1]+1])
                 valid_keys.append("right")
             # Checks if we can interact with a tree on our right (only works if our action type works for the action sequence)
@@ -93,7 +123,7 @@ class OrchardMap():
         # Is left valid
         if start[1] > 0:
             left = self.orchard_map[start[0], start[1]-1]
-            if left == 0 or left == -20:
+            if left == 0 or left == -20 or left == agent_id:
                 valid_moves.append([start[0], start[1]-1])
                 valid_keys.append("left")
             # Checks if we can interact with a tree on our right (only works if our action type works for the action sequence)
@@ -101,6 +131,13 @@ class OrchardMap():
                 valid_moves.append([start[0], start[1]-1])
                 valid_keys.append("interact")
         # returns list of x,y for all valid moves and a list of valid action keys: up, down, left, right, interact
+
+        if len(valid_moves) == 0:
+            # Simply do nothin and remain in the samen position
+            valid_moves.append(start)
+            valid_keys.append("stay")
+            # print("watch out")
+
         return valid_moves, valid_keys
 
     def update_map(self, start: list, goal: list, key: str, agent_id: int) -> None:
@@ -117,7 +154,7 @@ class OrchardMap():
         tree_checklist = []
         for i in range(np.shape(self.orchard_map)[0]):
             for j in range(len(self.row_description)):
-                if j != -10 or j != -20:
+                if self.orchard_map[i][j] in self.tree_combos and self.orchard_map[i][j] != -10:
                     tree_checklist.append([i, j])
         tree_checklist.reverse()
         return np.array(tree_checklist)
@@ -132,12 +169,18 @@ class OrchardMap():
     def reset_map(self, agents: list):
         # resets the map back to original state
         self.orchard_map = np.copy(self.original_map)
+        self.checklist = self.create_checklist()
         # respawns the agents
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         for i in range(len(agents)):
-            self.orchard_map[0][start + i] = agents[i].robot_class
             # sets the start pose of agents and the ids
-            agents[i].cur_pose = [0, start + i]
+            # self.orchard_map[0][start + i] = agents[i].robot_class
+            # agents[i].cur_pose = [0, start + i]
+
+            # Alejo's modifications (random spawn)
+            col = random.randrange(0, len(self.row_description))
+            self.orchard_map[0][col] = agents[i].robot_class
+            agents[i].cur_pose = [0, col]
 
 
 class OrchardSim():
@@ -151,53 +194,37 @@ class OrchardSim():
         self.ep_max = ep_max
         self.render = None
 
+        # Code added by Alejo
+        self.map.create_reward_map()
+        self.reward_flag = 0
+
     def run_gui(self):
         # runs gui
         self.render = pygame_render.PygameRender(self.map)
         self.render.start(self.agents, self.ep_max, self.tsep_max)
 
     def run(self):
-        # UNTESTED
-        tsteps = 0
-        eps = 0
-        while True:
-            # main control loop for all agents
-            for i in self.agents:
-                # get valid moves for agent
-                valid_moves, valid_keys = self.map.get_valid_moves(i.cur_pose, i.action_type)
-                # if we have a valid move continue
-                if len(valid_keys) > 0:
-                    # get the surrounding area with sensors
-                    points, vals = self.map.get_surroundings(i.cur_pose, 3)
-                    # if internal channel is set we want to communicate
-                    if i.comms_channel != None:
-                        # finds the agent we want to communicate with
-                        for j in self.agents:
-                            if j.id == j.comms_channel:
-                                # gets map from other agent
-                                i.recieve_communication(j.send_communication())
-                    # Agent chooses move doesnt do anything yet
-                    move, key = i.choose_move(points, vals, valid_moves, valid_keys)
-                    # REMOVE RANDOM MOVE ONCE CHOOSE MOVE IMPLEMENTED ONLY FOR DEMO
-                    move, key = i.random_move(valid_moves, valid_keys)
-                    # update our map with our action choice
-                    self.map.update_map(i.cur_pose, move, key, i.id)
-                    # if we moved from a spot we need to update the agents internal current position
-                    if key != "interact":
-                        i.cur_pose = move
 
-                    # if we are at max timestep increment episode and reset
-                    if tsteps >= self.tsep_max or self.map.check_complete():
-                        print("EPISODE : " + str(eps) + " COMPLETE")
-                        # if we are at max episode then quit
-                        if eps >= self.ep_max:
-                            return
-                        # reset tsteps
-                        tsteps = 0
-                        # reset the agents and the map
-                        for i in self.agents:
-                            i.reset_agent()
-                        self.map.reset_map(self.agents)
-                        eps += 1
-                    # increment timestep
-                    tsteps += 1
+        tsteps = self.tsep_max
+        eps = self.ep_max
+
+        for episode in tqdm(range(eps)):
+
+            # Reset map reward every episode
+            self.map.create_reward_map()
+
+            for steps in range(tsteps):
+
+                # --- Learn ---
+                # self.agents, self.map = tl.local_rewards(self.agents, self.map)
+                self.agents, self.map = tl.global_rewards(self.agents, self.map)
+                # self.agents, self.map = tl.diff_rewards(self.agents, self.map)
+
+                if self.map.check_complete():
+                    break
+
+            # Save rewards and reset
+            for i in self.agents:
+                i.reward_evolution.append(i.accumulated_reward)
+                i.reset_agent()
+            self.map.reset_map(self.agents)
