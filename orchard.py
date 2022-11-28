@@ -197,29 +197,34 @@ class OrchardSim():
         # Code added by Alejo
         self.map.create_reward_map()
         self.reward_flag = 0
+        self.r_map = orchard_map
+        self.r_agents = agents
 
     def run_gui(self):
         # runs gui
         self.render = pygame_render.PygameRender(self.map)
         self.render.start(self.agents, self.ep_max, self.tsep_max)
 
-    def run(self):
+    def run(self, approach:str):
 
         tsteps = self.tsep_max
         eps = self.ep_max
 
+        # Step 1: Generate Learning
         for episode in tqdm(range(eps)):
-
             # Reset map reward every episode
             self.map.create_reward_map()
 
             for steps in range(tsteps):
-
-                # --- Learn ---
-                self.agents, self.map = tl.random_learning(self.agents, self.map)
-                # self.agents, self.map = tl.local_rewards(self.agents, self.map)
-                # self.agents, self.map = tl.global_rewards(self.agents, self.map)
-                # self.agents, self.map = tl.diff_rewards(self.agents, self.map)
+                # --- Learn: Choose (uncomment) the approach ---
+                if approach == "random":
+                    self.agents, self.map = tl.random_learning(self.agents, self.map)
+                elif approach == "local":
+                    self.agents, self.map = tl.local_rewards(self.agents, self.map)
+                elif approach == "global":
+                    self.agents, self.map = tl.global_rewards(self.agents, self.map)
+                elif approach == "diff":
+                    self.agents, self.map = tl.diff_rewards(self.agents, self.map)
 
                 if self.map.check_complete():
                     break
@@ -229,3 +234,10 @@ class OrchardSim():
                 i.reward_evolution.append(i.accumulated_reward)
                 i.reset_agent()
             self.map.reset_map(self.agents)
+
+        # # Step3: Plot Results
+        # for i in range(len(self.agents)):
+        #     # tl.plot_reward(self.agents[i].reward_evolution, i)
+        #     tl.plot_reward_and_baseline(self.agents[i].reward_evolution, self.r_agents[i].reward_evolution, i)
+        #     tl.plot_values(self.agents[i].q_sa_table, i)
+        # plt.show()

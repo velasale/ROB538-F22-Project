@@ -64,11 +64,17 @@ def small_orchard():
     row_height = 2
 
     # Algorithm parameters
-    time_steps = 500
-    episodes = 2000
+    time_steps = 100
+    episodes = 500
 
     # Create Orchard
     small_orchard = orchard.OrchardMap(
+        row_height=row_height, row_description=small_row8, top_buffer=top_buffer, bottom_buffer=bottom_buffer,
+        action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
+        tree_combos=default_tree_combos)
+
+    # Create Orchard
+    small_orchard_r = orchard.OrchardMap(
         row_height=row_height, row_description=small_row8, top_buffer=top_buffer, bottom_buffer=bottom_buffer,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
@@ -77,23 +83,34 @@ def small_orchard():
     rows = row_height + top_buffer + bottom_buffer
     cols = len(small_row8)
     agent_list = []
+    agent_list_r = []
     for i in range(1):
         a = orchard_agents.AgentPick(rows, cols)
         agent_list.append(a)
+        a_r = orchard_agents.AgentPick(rows, cols)
+        agent_list_r.append(a_r)
     for i in range(1):
         a = orchard_agents.AgentPrune(rows, cols)
         agent_list.append(a)
+        a_r = orchard_agents.AgentPrune(rows, cols)
+        agent_list_r.append(a_r)
 
     # Learn
+    test_r = orchard.OrchardSim(orchard_map=small_orchard_r, agents=agent_list_r, tstep_max=time_steps, ep_max=episodes)
+    # test.run_gui()
+    # To run without GUI (Way faster)
+    test_r.run("random")
+
     test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=time_steps, ep_max=episodes)
     # test.run_gui()
     # To run without GUI (Way faster)
-    test.run()
+    test.run("local")
 
-    # Plot Results
-    for i in range(len(test.agents)):
-        tl.plot_reward(test.agents[i].reward_evolution, i)
-        tl.plot_values(test.agents[i].q_sa_table, i)
+    # Step3: Plot Results
+    for i in range(len(test_r.agents)):
+        # tl.plot_reward(test_r.agents[i].reward_evolution, i)
+        tl.plot_reward_and_baseline(test.agents[i].reward_evolution, test_r.agents[i].reward_evolution, i)
+        tl.plot_values(test_r.agents[i].q_sa_table, i)
     plt.show()
 
 

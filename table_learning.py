@@ -260,6 +260,41 @@ def plot_reward(rewards_evolution: list, i):
     plt.title(i)
 
 
+def plot_reward_and_baseline(rewards_evolution_1: list, rewards_evolution_2, i):
+    """
+    Plots RL rewards evolution with a shaded background
+    :param rewards_evolution:
+    :param i:
+    :return:
+    """
+    fig = plt.figure()
+    average_data_1 = []
+    average_data_2 = []
+    window = len(rewards_evolution_1) // 15
+    color = 'blue'
+
+    # Step 1: Obtain the moving average window
+    for ind in range(len(rewards_evolution_1) - window + 1):
+        average_data_1.append(np.mean(rewards_evolution_1[ind:ind + window]))
+    for ind in range(len(rewards_evolution_2) - window + 1):
+        average_data_2.append(np.mean(rewards_evolution_2[ind:ind + window]))
+
+    label = "Moving Average with " + str(window) + " window"
+
+    # Step 2: Plot results
+    # alpha sets the transparency of the original data
+    plt.plot(average_data_1, color=color, label=label)
+    plt.plot(rewards_evolution_1, color=color, alpha=0.25, label='Original Data')
+    color = 'black'
+    plt.plot(average_data_2, color=color, label=label)
+    plt.plot(rewards_evolution_2, color=color, alpha=0.1, label='Random - Original Data')
+
+    plt.xlabel("Episodes")
+    plt.ylabel("Reward")
+    plt.legend()
+    plt.title(i)
+
+
 def plot_values(values: list, i):
     """Plots values for each state
     """
