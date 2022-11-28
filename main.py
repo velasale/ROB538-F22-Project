@@ -22,8 +22,8 @@ default_tree_combos = [1, 2, 3, 4, -10]
 
 
 # Alejo's To check with only 1 agent and one tree
-default_prob = [1, 0]
-default_tree_combos = [3, -10]
+default_prob = [0.5, 0.5, 0]
+default_tree_combos = [1, 2, -10]
 
 # Design A:
 small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0]
@@ -61,7 +61,7 @@ def small_orchard():
     # Grid parameters
     top_buffer = 2
     bottom_buffer = 2
-    row_height = 1
+    row_height = 2
 
     # Algorithm parameters
     time_steps = 500
