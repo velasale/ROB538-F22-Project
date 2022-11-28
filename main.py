@@ -26,11 +26,11 @@ default_prob = [0.5, 0.5, 0]
 default_tree_combos = [1, 2, -10]
 
 # Design A:
-# small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0]
+small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0]
 
 # Design A:
 # tstep = 500, episodes = 5000, epsilon = 0.99
-small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
+# small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
 # small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, -20, -10, -10, -20, 0, 0]
 
 
@@ -61,11 +61,11 @@ def small_orchard():
     # Grid parameters
     top_buffer = 2
     bottom_buffer = 2
-    row_height = 4
+    row_height = 2
 
     # Algorithm parameters
     time_steps = 500
-    episodes = 1000
+    episodes = 2000
 
     # Create Orchard
     small_orchard = orchard.OrchardMap(
@@ -77,10 +77,10 @@ def small_orchard():
     rows = row_height + top_buffer + bottom_buffer
     cols = len(small_row8)
     agent_list = []
-    for i in range(4):
+    for i in range(1):
         a = orchard_agents.AgentPick(rows, cols)
         agent_list.append(a)
-    for i in range(4):
+    for i in range(1):
         a = orchard_agents.AgentPrune(rows, cols)
         agent_list.append(a)
 

@@ -216,9 +216,10 @@ class OrchardSim():
             for steps in range(tsteps):
 
                 # --- Learn ---
+                self.agents, self.map = tl.random_learning(self.agents, self.map)
                 # self.agents, self.map = tl.local_rewards(self.agents, self.map)
                 # self.agents, self.map = tl.global_rewards(self.agents, self.map)
-                self.agents, self.map = tl.diff_rewards(self.agents, self.map)
+                # self.agents, self.map = tl.diff_rewards(self.agents, self.map)
 
                 if self.map.check_complete():
                     break
