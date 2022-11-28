@@ -30,11 +30,11 @@ class AgentBase():
         self.goal_pose = self.cur_pose
         # current comms channel (ROBOT ID)
         self.comms_channel = None
-        self.policy_net = dqn.DQN(device).to(device)
-        self.target_net = dqn.DQN(device).to(device)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.target_net.eval()
-        self.eps = .3
+        # self.policy_net = dqn.DQN(device).to(device)
+        # self.target_net = dqn.DQN(device).to(device)
+        # self.target_net.load_state_dict(self.policy_net.state_dict())
+        # self.target_net.eval()
+        # self.eps = .4
 
     def reset_agent(self):
         # TODO: Used to reset the agent after each episode
@@ -77,7 +77,7 @@ class AgentBase():
         state = np.concatenate((self.cur_pose, aa, area_expectations))
         state_t = torch.from_numpy(state).float()
         r = np.random.uniform(0, 1)
-        if tstep % 1500 == 0 and self.eps != .05:
+        if tstep % 2000 == 0 and self.eps != 0:
             self.eps -= .05
         if r < 1-self.eps:
             with torch.no_grad():
@@ -92,9 +92,21 @@ class AgentBase():
             rand_choice = np.random.randint(len(action_areas))
             return action_areas[rand_choice], rand_choice
 
+    def choose_move_eval(self, action_areas, area_expectations, tstep):
+        aa = np.ndarray.flatten(action_areas)
+        state = np.concatenate((self.cur_pose, aa, area_expectations))
+        state_t = torch.from_numpy(state).float()
+        logits = self.policy_net(state_t)
+        #logits = torch.Tensor.cpu(logits)
+        #softmax = nn.Softmax(dim=1)
+        #pred_probab = softmax(logits)
+        #idx = np.argmax(logits.data.numpy())
+        idx = torch.Tensor.cpu(logits.max(0)[1])
+        return action_areas[idx], idx
+
 
 class AgentPick(AgentBase):
-    def __init__(self) -> None:
+    def __init__(self, eval=False) -> None:
         self.id = None
         # Class identifier
         self.robot_class = 100
@@ -105,11 +117,16 @@ class AgentPick(AgentBase):
         self.goal_pose = self.cur_pose
         # current comms channel (ROBOT ID)
         self.comms_channel = None
-        self.policy_net = dqn.DQN(device).to(device)
-        self.target_net = dqn.DQN(device).to(device)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.target_net.eval()
-        self.eps = .3
+        if eval == True:
+            print("here")
+            self.policy_net = torch.load("pnet.pt").to(device)
+            self.policy_net.eval()
+        else:
+            self.policy_net = dqn.DQN(device).to(device)
+            self.target_net = dqn.DQN(device).to(device)
+            self.target_net.load_state_dict(self.policy_net.state_dict())
+            self.target_net.eval()
+        self.eps = .5
 
 
 class AgentPrune(AgentBase):
@@ -120,6 +137,19 @@ class AgentPrune(AgentBase):
         # Class specific action
         self.action_type = 2
         # current position
-        self.cur_pos = [0, 0]
+        self.cur_pose = [0, 0]
         # current comms channel (ROBOT ID)
         self.comms_channel = None
+        self.goal_pose = self.cur_pose
+        # current comms channel (ROBOT ID)
+        self.comms_channel = None
+        if eval == True:
+            print("here")
+            self.policy_net = torch.load("pnet.pt").to(device)
+            self.policy_net.eval()
+        else:
+            self.policy_net = dqn.DQN(device).to(device)
+            self.target_net = dqn.DQN(device).to(device)
+            self.target_net.load_state_dict(self.policy_net.state_dict())
+            self.target_net.eval()
+        self.eps = .5

@@ -14,7 +14,7 @@ default_action_sequence = {1: -10, 2: -10, 3: 2, 4: 1}
 # Action mappings, A pruner with action type 1 can do action sequences 1 or 3
 default_action_map = {1: 1, 2: 2, 3: 1, 4: 2}
 # probability for each tree to have an action sequence
-default_prob = [.4, .1, .1, .3, .1]
+default_prob = [.2, .3, .3, .1, .1]
 # Tree representations (Mostly for GUI)
 default_tree_combos = [1, 2, 3, 4, -10]
 
@@ -46,14 +46,14 @@ def small_orchard():
     for i in range(1):
         a = orchard_agents.AgentPick()
         agent_list.append(a)
-#    for i in range(1):
-        #a = orchard_agents.AgentPrune()
-        # agent_list.append(a)
+    for i in range(1):
+        a = orchard_agents.AgentPrune()
+        agent_list.append(a)
     small_orchard = orchard.OrchardMap(
         row_height=8, row_description=small_row8, top_buffer=3, bottom_buffer=2,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
-        tree_combos=default_tree_combos, num_classes=1)
-    test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=50, ep_max=200)
+        tree_combos=default_tree_combos, class_types=[1, 2])
+    test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=100, ep_max=300)
     test.run_gui()
     # To run without GUI (Way faster)
     # test.run()

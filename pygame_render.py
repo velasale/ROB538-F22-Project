@@ -66,6 +66,7 @@ class PygameRender():
         eps = 0
         done = False
         reward_plot = []
+        p_r = 0
         # sets clock
         clock = pygame.time.Clock()
         # loops forever until exit
@@ -86,22 +87,26 @@ class PygameRender():
                 # if we have a valid move continue
                 if len(valid_keys) > 0:
                     # get the surrounding area with sensors
-                    # points, vals = self.map.get_surroundings(i.cur_pose, 3)
-                    area, exp = self.map.get_area_expectations()
+                    points, vals = self.map.get_surroundings(i.cur_pose, 3)
+                    self.map.update_expectations(i.action_type, points, vals)
+                    area, exp = self.map.get_area_expectations(i.action_type)
                     move, idx = i.choose_move(area, exp, total_tsteps)
+                    #move, idx = i.choose_move_eval(area, exp, total_tsteps)
                     state_t = torch.from_numpy(np.concatenate((i.cur_pose, np.ndarray.flatten(area), exp))).float()
                     states1.append(state_t)
                     actions.append(torch.from_numpy(np.array([idx])))
                     # update our map with our action choice
-                    self.map.update_map(i.cur_pose, move, "interact", i.id)
+                    self.map.update_map(i.cur_pose, move, "interact", i.id, i.action_type)
                     # if we moved from a spot we need to update the agents internal current position
                     i.cur_pose = move
-
+            # print(self.map.area_expectations)
             for i in range(len(agents)):
-                area, exp = self.map.get_area_expectations()
+                area, exp = self.map.get_area_expectations(agents[i].action_type)
                 new_state_t = torch.from_numpy(np.concatenate(
                     (agents[i].cur_pose, np.ndarray.flatten(area), exp))).float()
                 reward = self.map.calculate_global_reward()
+                reward_e = self.map.calculate_expected_reward(agents[i].action_type, agents[i].cur_pose)
+                reward[0] += reward_e
                 agents[i].policy_net.memory.push(states1[i], actions[i], new_state_t,
                                                  torch.from_numpy(reward).float())
                 agents[i].optimize_agent()
@@ -118,12 +123,14 @@ class PygameRender():
             # if we are at max timestep increment episode and reset
             if tsteps >= max_tstep or self.map.check_complete():
                 print("EPISODE : " + str(eps) + " COMPLETE")
+                p_r = 0
                 reward_plot.append(int(self.map.calculate_global_reward()))
                 print(reward_plot[-1])
                 # if we are at max episode then quit
                 if eps >= max_ep:
                     plt.plot(np.arange(len(reward_plot)), reward_plot)
                     plt.show()
+                    torch.save(agents[0].policy_net, "pnet.pt")
                     pygame.quit()
                     return
                 # reset tsteps
