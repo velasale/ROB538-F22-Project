@@ -254,6 +254,12 @@ def dpp_rewards(agents, map):
             i.points, i.vals = map.get_surroundings(i.cur_pose, 1)
             # print("Valid moves and valid keys are: ", valid_moves, valid_keys)
 
+            # # Avoid going two steps back
+            # for n in i.valid_moves:
+            #     if n == i.previous_pose and len(i.valid_moves) != 0 :
+            #         i.valid_moves.remove(n)
+            #         break
+
             # --- Step 1: Take next action ---
             # a - Observe next state
             i.move, i.key = i.choose_move(i.points, i.vals, i.valid_moves, i.valid_keys)
@@ -267,10 +273,12 @@ def dpp_rewards(agents, map):
             if i.reward < 0:
                 for j in agents:
                     # Let each agent assume the current agent's position
+                    # Only those that are different
+                    # if j.action_type != i.action_type:
                     j.valid_moves, j.valid_keys = map.get_valid_moves(i.cur_pose, j.action_type, j.id)
 
                     if "interact" in j.valid_keys:
-                        total_rewards += 10
+                        total_rewards += 5
 
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(i.move, i.action_type, i.id)

@@ -202,10 +202,11 @@ class OrchardSim():
         self.map.create_reward_map()
         self.reward_flag = 0
 
-    def run_gui(self):
+    def run_gui(self, approach):
         # runs gui
         self.render = pygame_render.PygameRender(self.map)
         self.render.start(self.agents, self.ep_max, self.tsep_max)
+        self.render.approach = approach
 
     def run(self, approach:str):
 

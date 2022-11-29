@@ -52,6 +52,7 @@ class PygameRender():
         pygame.display.set_caption("ORCHARD")
 
         self.reward_flag = 0
+        self.approach = ""
 
     def start(self, agents: list, max_ep: int, max_tstep: int):
         #tsteps and episodes
@@ -63,27 +64,39 @@ class PygameRender():
         clock = pygame.time.Clock()
         # loops forever until exit
 
+        previous_step = 0
+        for i in agents:
+            i.previous_pose = i.cur_pose
+
         while not done:
-            # 30fps
-            clock.tick(30)
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:  # If user clicked close
                     done = True  # Flag that we are done so we exit this loop
 
-            # Reset map reward every episode
-            self.map.create_reward_map()
+            if tsteps - previous_step == 2:
+                previous_step = tsteps
+                for i in agents:
+                    i.previous_pose = i.cur_pose
 
             # Learn
-            agents, self.map = tl.local_rewards(agents, self.map)
-            # self.agents, self.map = tl.global_rewards(self.agents, self.map, tsteps)
-            # self.agents, self.map = tl.diff_rewards(self.agents, self.map, tsteps)
+            # if self.approach == "dpp":
+            agents, self.map = tl.dpp_rewards(agents, self.map)
+            # Learn
+            # agents, self.map = tl.local_rewards(agents, self.map)
+            # self.agents, self.map = tl.global_rewards(self.agents, self.map)
+            # self.agents, self.map = tl.diff_rewards(self.agents, self.map)
 
-            # draws everything
-            self.draw_grid()
-            # sleep to make it less fast, can take out if you want it sped up
-            # time.sleep(.4)
-            # updates display
-            pygame.display.update()
+            if eps >=10:
+                # 30fps
+                clock.tick(30)
+
+                # draws everything
+                self.draw_grid()
+                # sleep to make it less fast, can take out if you want it sped up
+                # time.sleep(.4)
+                # updates display
+                pygame.display.update()
 
             # if we are at max timestep increment episode and reset
             if tsteps >= max_tstep or self.map.check_complete():

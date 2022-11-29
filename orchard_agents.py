@@ -31,6 +31,8 @@ class AgentBase():
         self.vals = []
         self.valid_moves = []
         self.valid_keys = []
+        self.previous_pose_step = 0
+        self.previous_pose = []
 
     def reset_agent(self):
         self.epsilon = 1
