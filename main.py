@@ -47,8 +47,8 @@ def small_orchard():
     test_name = 'Local_'
     agent_list = []
     for i in range(1):
-        a = orchard_agents.AgentPickSAClimited(40)
-        b = orchard_agents.AgentPruneSAClimited(40)
+        a = orchard_agents.AgentPickSAClimited(40, test_name+'Pick')
+        b = orchard_agents.AgentPruneSAClimited(40, test_name+'Prune')
         agent_list.append(a)
         agent_list.append(b)
 

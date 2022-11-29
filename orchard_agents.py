@@ -291,7 +291,7 @@ class AgentPruneSAC(AgentBase):
 
 
 class AgentPickSAClimited(AgentBase):
-    def __init__(self, num_trees) -> None:
+    def __init__(self, num_trees, name='none') -> None:
         self.id = None
         # Class identifier
         self.robot_class = 100
@@ -303,7 +303,7 @@ class AgentPickSAClimited(AgentBase):
         self.comms_channel = None
         # memory bank the size of the field.        
         # initialize the learner
-        self.policy = SACLimited(2+num_trees, 5, 'pick_agent_local_rand')
+        self.policy = SACLimited(2+num_trees, 5, name)
         # epsilon for exploration
         self.epsilon = 0.9 
         self.state = []
@@ -355,7 +355,7 @@ class AgentPickSAClimited(AgentBase):
         self.policy.save(filepath, 'Pick')
         
 class AgentPruneSAClimited(AgentBase):
-    def __init__(self, num_trees) -> None:
+    def __init__(self, num_trees, name='none') -> None:
         self.id = None
         # Class identifier
         self.robot_class = 100
@@ -367,7 +367,7 @@ class AgentPruneSAClimited(AgentBase):
         self.comms_channel = None
         # memory bank the size of the field.        
         # initialize the learner
-        self.policy = SACLimited(2+num_trees, 5, 'prune_agent_local_rand')
+        self.policy = SACLimited(2+num_trees, 5, name)
         # epsilon for exploration
         self.epsilon = 0.9 
         self.state = []
