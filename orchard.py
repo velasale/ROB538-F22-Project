@@ -51,6 +51,10 @@ class OrchardMap():
                     if self.orchard_map[i][j] == 2:
                         self.reward_map[i][j] = 10
 
+                    if self.orchard_map[i][j] == 3:
+                        self.reward_map[i][j] = 10
+
+
     def create_map(self, agents: list = None) -> None:
         # Change every row except for buffer rows to the row_description
         for i in range(self.top_buffer, len(self.orchard_map) - self.bottom_buffer):
@@ -69,15 +73,15 @@ class OrchardMap():
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         for i in range(len(agents)):
             # sets the start pose of agents and the ids
-            self.orchard_map[0][start + i] = agents[i].robot_class
-            agents[i].cur_pose = [0, start + i]
+            # self.orchard_map[0][start + i] = agents[i].robot_class
+            # agents[i].cur_pose = [0, start + i]
 
             agents[i].id = agents[i].robot_class + i
 
             # Alejo's modifications (random spawn)
-            # col = random.randrange(0, len(self.row_description))
-            # self.orchard_map[0][col] = agents[i].robot_class
-            # agents[i].cur_pose = [0, col]
+            col = random.randrange(0, len(self.row_description))
+            self.orchard_map[0][col] = agents[i].robot_class
+            agents[i].cur_pose = [0, col]
 
     def get_surroundings(self, start: list, sight_length: int):
         # Gets the sight_length x sight_length area around the agent
@@ -174,13 +178,13 @@ class OrchardMap():
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         for i in range(len(agents)):
             # sets the start pose of agents and the ids
-            self.orchard_map[0][start + i] = agents[i].robot_class
-            agents[i].cur_pose = [0, start + i]
+            # self.orchard_map[0][start + i] = agents[i].robot_class
+            # agents[i].cur_pose = [0, start + i]
 
             # Alejo's modifications (random spawn)
-            # col = random.randrange(0, len(self.row_description))
-            # self.orchard_map[0][col] = agents[i].robot_class
-            # agents[i].cur_pose = [0, col]
+            col = random.randrange(0, len(self.row_description))
+            self.orchard_map[0][col] = agents[i].robot_class
+            agents[i].cur_pose = [0, col]
 
 
 class OrchardSim():
@@ -223,6 +227,10 @@ class OrchardSim():
                     self.agents, self.map = tl.global_rewards(self.agents, self.map)
                 elif approach == "diff":
                     self.agents, self.map = tl.diff_rewards(self.agents, self.map)
+                elif approach == "follow":
+                    self.agents, self.map = tl.followme_rewards(self.agents, self.map)
+                elif approach == "dpp":
+                    self.agents, self.map = tl.dpp_rewards(self.agents, self.map)
 
                 if self.map.check_complete():
                     break

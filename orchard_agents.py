@@ -27,7 +27,10 @@ class AgentBase():
         self.key = ""
         self.move = []
         self.move_2 = []
-
+        self.points = []
+        self.vals = []
+        self.valid_moves = []
+        self.valid_keys = []
 
     def reset_agent(self):
         self.epsilon = 1

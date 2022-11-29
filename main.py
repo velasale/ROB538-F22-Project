@@ -20,15 +20,15 @@ default_prob = [.2, .1, .3, .3, .1]
 default_tree_combos = [1, 2, 3, 4, -10]
 
 # Alejo's To check with only 1 agent and one tree
-default_prob = [1, 0]
-default_tree_combos = [3, -10]
+default_prob = [0, 0, 1, 0]
+default_tree_combos = [1, 2, 3, -10]
 
 # Design A:
-small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0]
+# small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0]
 
 # Design A:
 # tstep = 500, episodes = 5000, epsilon = 0.99
-# small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
+small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
 
 
 # small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, -20, -10, -10, -20, 0, 0]
@@ -61,11 +61,11 @@ def small_orchard(approach: str):
     # Grid parameters
     top_buffer = 3
     bottom_buffer = 3
-    row_height = 1
+    row_height = 2
 
     # Algorithm parameters
-    time_steps = 500
-    episodes = 1000
+    time_steps = 1000
+    episodes = 10000
 
     # Create Orchard
     small_orchard = orchard.OrchardMap(
@@ -78,10 +78,10 @@ def small_orchard(approach: str):
     cols = len(small_row8)
     agent_list = []
 
-    for i in range(1):
+    for i in range(2):
         a = orchard_agents.AgentPick(rows, cols)
         agent_list.append(a)
-    for i in range(1):
+    for i in range(2):
         a = orchard_agents.AgentPrune(rows, cols)
         agent_list.append(a)
 
@@ -95,7 +95,7 @@ def small_orchard(approach: str):
 
 if __name__ == "__main__":
 
-    approach = "diff"
+    approach = "dpp"
     test = small_orchard(approach)
     # test = large_orchard()
     # test_random = small_orchard("random")
