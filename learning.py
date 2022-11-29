@@ -395,7 +395,6 @@ class SACLimited():
                 next_state.append(timestep['next_state'])
                 cf_reward.append(timestep['cf_reward'])
                 cf_state.append(timestep['cf_state'])
-                
             state = torch.tensor(state)
             state = torch.flatten(state, start_dim=1)
             state = state.to(device).float()
@@ -422,9 +421,9 @@ class SACLimited():
             # print(reward, target_Q)
 
             #base kit target q
-            # target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
+            target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
             #brainded cf target q
-            target_Q = reward + (self.gamma * target_Q).detach() - cf_reward
+            # target_Q = reward + (self.gamma * target_Q).detach() - cf_reward
             #use next state cf target q
             # cf_actions = self.actor_target(cf_state)
             # target_Q = reward - cf_reward + (self.gamma * target_Q).detach() \

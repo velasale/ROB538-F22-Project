@@ -303,7 +303,7 @@ class AgentPickSAClimited(AgentBase):
         self.comms_channel = None
         # memory bank the size of the field.        
         # initialize the learner
-        self.policy = SACLimited(2+num_trees, 5, 'pick_agent_cf_1')
+        self.policy = SACLimited(2+num_trees, 5, 'pick_agent_local_rand')
         # epsilon for exploration
         self.epsilon = 0.9 
         self.state = []
@@ -364,7 +364,7 @@ class AgentPruneSAClimited(AgentBase):
         self.comms_channel = None
         # memory bank the size of the field.        
         # initialize the learner
-        self.policy = SACLimited(2+num_trees, 5, 'prune_agent_cf_1')
+        self.policy = SACLimited(2+num_trees, 5, 'prune_agent_local_rand')
         # epsilon for exploration
         self.epsilon = 0.9 
         self.state = []

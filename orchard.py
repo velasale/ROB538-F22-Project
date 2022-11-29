@@ -31,6 +31,8 @@ class OrchardMap():
         self.original_map = None
         self.picked_apples = 0
         self.pruned_trees = 0
+        self.total_apples = 0
+        self.total_leaves = 0
         self.rewards = []
         self.episode_rewards = []
         self.timestep = 0
@@ -39,6 +41,7 @@ class OrchardMap():
         
 
     def create_map(self, agents: list = None) -> None:
+        # np.random.seed = 42
         # Change every row except for buffer rows to the row_description
         for i in range(self.top_buffer, len(self.orchard_map) - self.bottom_buffer):
             for j in range(len(self.row_description)):
@@ -59,6 +62,9 @@ class OrchardMap():
             agents[i].cur_pose = [0, start + i]
             agents[i].id = agents[i].robot_class + i
         self.cf_map = self.orchard_map.copy()
+        self.total_apples = np.sum(self.orchard_map == 1) + np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
+        self.total_leaves = np.sum(self.orchard_map == 2) + np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
+        
 
     def get_surroundings(self, start: list, sight_length: int):
         # Gets the sight_length x sight_length area around the agent
@@ -214,8 +220,8 @@ class OrchardMap():
         # resets the map back to original state
         print(f'picked {self.picked_apples} apples this episode')
         print(f'pruned {self.pruned_trees} trees this episode')
-        self.orchard_map = np.copy(self.original_map)
-
+        self.orchard_map = np.zeros(self.original_map.shape)
+        self.create_map(agents)
         self.rewards.append([self.picked_apples, self.pruned_trees])
         self.episode_global_rewards.append(self.global_reward)
         self.episode_rewards = []
@@ -224,18 +230,18 @@ class OrchardMap():
         self.picked_apples = 0
         self.pruned_trees = 0
         
-        # respawns the agents
-        start = (len(self.row_description) // 2) - (len(agents) // 2)
+        # # respawns the agents
+        # start = (len(self.row_description) // 2) - (len(agents) // 2)
 
-        for i in range(len(agents)):
-            self.orchard_map[0][start + i] = agents[i].robot_class
-            # sets the start pose of agents and the ids
-            agents[i].cur_pose = [0, start + i]
-        # start2 = [np.random.randint(10),np.random.randint(5)]
-        # self.orchard_map[start2[0]][start2[1]] = agents[0].robot_class
-        # agents[0].cur_pose = [start2[0],start2[1]]
+        # for i in range(len(agents)):
+        #     self.orchard_map[0][start + i] = agents[i].robot_class
+        #     # sets the start pose of agents and the ids
+        #     agents[i].cur_pose = [0, start + i]
+        # # start2 = [np.random.randint(10),np.random.randint(5)]
+        # # self.orchard_map[start2[0]][start2[1]] = agents[0].robot_class
+        # # agents[0].cur_pose = [start2[0],start2[1]]
         n1 = np.sum(self.orchard_map == 1) + np.sum(self.orchard_map == 3)
-        print(n1, 'total apples to pick this time')
+        print(n1, 'total apples to pick in the future')
         self.cf_map = self.orchard_map.copy()
 
     def get_apple_tree_state(self, cf=False):
@@ -428,6 +434,7 @@ class OrchardSim():
                     if i.action_type == 2:
                         tree_state = self.map.get_prune_tree_state()
                         cf_state = self.map.get_prune_tree_state(True)
+                        # if len
                     else:
                         tree_state = self.map.get_apple_tree_state()
                         cf_state = self.map.get_apple_tree_state(True)
@@ -441,7 +448,7 @@ class OrchardSim():
                     self.map.timestep += 1
                     i.cur_cf_pose = i.cur_pose.copy()
                     self.map.cf_map = self.map.orchard_map.copy()
-                    self.map.global_reward.append(self.map.picked_apples*self.map.pruned_trees)
+                    self.map.global_reward.append(100*self.map.picked_apples*self.map.pruned_trees/self.map.total_apples/self.map.total_leaves)
                     if tsteps >= self.tsep_max or self.map.check_complete():
                         print("EPISODE : " + str(eps) + " COMPLETE")
                         # if we are at max episode then quit
