@@ -1,5 +1,6 @@
 import numpy as np
 import pygame_render
+import pickle as pkl
 # import copy
 # import orchard_agents
 
@@ -38,7 +39,7 @@ class OrchardMap():
         self.timestep = 0
         self.global_reward = []
         self.episode_global_rewards = []
-        
+        self.num_trees = []
 
     def create_map(self, agents: list = None) -> None:
         # np.random.seed = 42
@@ -64,7 +65,7 @@ class OrchardMap():
         self.cf_map = self.orchard_map.copy()
         self.total_apples = np.sum(self.orchard_map == 1) + np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
         self.total_leaves = np.sum(self.orchard_map == 2) + np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
-        
+        self.num_trees.append([self.total_apples, self.total_leaves])
 
     def get_surroundings(self, start: list, sight_length: int):
         # Gets the sight_length x sight_length area around the agent
@@ -275,6 +276,13 @@ class OrchardMap():
                 else:
                     tree_state.append(0)
         return tree_state
+
+    def save_data(self,filepath=None):
+        if filepath is None:
+            filepath = 'GIVEFILEPATH'
+        save_dict = {'Global Reward':self.episode_global_rewards, 'Pick/Prune':self.rewards, 'Num Trees': self.num_trees}
+        with open(filepath + '.pkl', 'wb+') as file:
+            pkl.dump(save_dict, file)
 
 class DiscreteOrchardSim():
 

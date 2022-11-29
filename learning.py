@@ -458,3 +458,8 @@ class SACLimited():
 
         for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+            
+    def save(self,filepath, agent_type):
+        filepath = filepath + agent_type
+        torch.save(self.actor.state_dict(), filepath+'_Actor.pt')
+        torch.save(self.critic.state_dict(), filepath+'_Critic.pt')

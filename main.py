@@ -44,6 +44,7 @@ def large_orchard():
 def small_orchard():
     # 2 agents even split between pick and prune
     # 8x13
+    test_name = 'Local_'
     agent_list = []
     for i in range(1):
         a = orchard_agents.AgentPickSAClimited(40)
@@ -55,11 +56,15 @@ def small_orchard():
         row_height=10, row_description=small_row8, top_buffer=1, bottom_buffer=1,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
-    num_eps = 1000
+    num_eps = 10
     test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=100, ep_max=num_eps)
     # test.run_gui()
     # To run without GUI (Way faster)
+    
     test.run()
+    for agents in test.agents:
+        agents.save_agent(test_name)
+    test.map.save_data(test_name+'data')
     g_rewards = np.array([i[-1] for i in test.map.episode_global_rewards])
     plt.plot(range(num_eps),g_rewards)
     plt.title('Episode Global Rewards')
@@ -83,6 +88,7 @@ def small_orchard():
 def small_orchard_single():
     # 2 agents even split between pick and prune
     # 8x13
+    test_name = 'Local'
     agent_list = []
     for i in range(1):
         a = orchard_agents.AgentPickSAClimited(40)
@@ -92,11 +98,14 @@ def small_orchard_single():
         row_height=10, row_description=small_row8, top_buffer=1, bottom_buffer=1,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
-    num_eps = 100
+    num_eps = 10
     test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=70, ep_max=num_eps)
     # test.run_gui()
     # To run without GUI (Way faster)
     test.run()
+    for agents in test.agents:
+        agents.save_agent(test_name)
+    test.map.save_data(test_name+'data')
     num_rewards = [sum(rew) for rew in test.map.rewards]
     print(num_rewards)
     plt.plot(range(num_eps),num_rewards)

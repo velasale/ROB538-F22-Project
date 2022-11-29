@@ -351,6 +351,9 @@ class AgentPickSAClimited(AgentBase):
         # TODO: Used to reset the agent after each episode
         pass
     
+    def save_agent(self, filepath):
+        self.policy.save(filepath, 'Pick')
+        
 class AgentPruneSAClimited(AgentBase):
     def __init__(self, num_trees) -> None:
         self.id = None
@@ -410,3 +413,6 @@ class AgentPruneSAClimited(AgentBase):
     def reset_agent(self):
         # TODO: Used to reset the agent after each episode
         pass
+    
+    def save_agent(self, filepath):
+        self.policy.save(filepath, 'Prune')
