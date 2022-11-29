@@ -195,9 +195,9 @@ class Actor(nn.Module):
         a = F.relu(self.l1(state))
         a = F.relu(self.l2(a))
         try:
-            return torch.nn.functional.normalize(F.sigmoid(self.l3(a)))
+            return torch.nn.functional.normalize(torch.sigmoid(self.l3(a)))
         except IndexError:
-            return torch.nn.functional.normalize(F.sigmoid(self.l3(a)),dim=0)
+            return torch.nn.functional.normalize(torch.sigmoid(self.l3(a)),dim=0)
 
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -364,8 +364,8 @@ class SACLimited():
                 indexthing = action_keys.index(self.action_order[action.item()])
                 return possible_actions[indexthing], self.action_order[action], actions
     
-    def update_buffer(self,state,action,reward,next_state):
-        self.replay_buffer.update_buffer(self.enum,self.tnum,state,action,reward,next_state)
+    def update_buffer(self,state,action,reward,next_state,cf_reward,cf_state):
+        self.replay_buffer.update_buffer(self.enum,self.tnum,state,action,reward,next_state,cf_reward,cf_state)
         self.tnum += 1
         
     def end_episode(self):
@@ -383,7 +383,8 @@ class SACLimited():
             action = []
             reward = []
             next_state = []
-
+            cf_reward = []
+            cf_state = []
             for timestep in sample:
                 state.append(timestep['state'])
                 # print('timestep state')
@@ -392,6 +393,8 @@ class SACLimited():
                 # print(type(timestep['action']))
                 reward.append(timestep['reward'])
                 next_state.append(timestep['next_state'])
+                cf_reward.append(timestep['cf_reward'])
+                cf_state.append(timestep['cf_state'])
                 
             state = torch.tensor(state)
             state = torch.flatten(state, start_dim=1)
@@ -404,14 +407,29 @@ class SACLimited():
             next_state = torch.tensor(next_state)
             next_state = torch.flatten(next_state, start_dim=1)
             next_state = next_state.to(device).float()
+            
+            cf_reward = torch.tensor(cf_reward)
+            cf_reward = cf_reward.to(device).float()
+
+            cf_state = torch.tensor(cf_state)
+            cf_state = torch.flatten(cf_state, start_dim=1)
+            cf_state = cf_state.to(device).float()
+            
             action_probabilities = self.actor(state)
             current_Q = self.critic(state,action).sum(axis=1)
             next_actions = self.actor_target(next_state)
             target_Q = self.critic_target(next_state, next_actions).max(axis=1)[0]
             # print(reward, target_Q)
 
-            target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
-    
+            #base kit target q
+            # target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
+            #brainded cf target q
+            target_Q = reward + (self.gamma * target_Q).detach() - cf_reward
+            #use next state cf target q
+            # cf_actions = self.actor_target(cf_state)
+            # target_Q = reward - cf_reward + (self.gamma * target_Q).detach() \
+            #     - (self.gamma * self.critic_target(cf_state, cf_actions).max(axis=1)[0]).detach()
+            
             target_Q = target_Q.float()
             
             critic_loss = F.mse_loss(current_Q, target_Q)

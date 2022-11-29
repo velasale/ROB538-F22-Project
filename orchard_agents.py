@@ -35,6 +35,7 @@ class AgentBase():
         self.field_size = field_size
         # epsilon for exploration
         self.epsilon = 0.9
+        self.cur_cf_pose = [0,0]
 
 
     def reset_agent(self):
@@ -220,9 +221,10 @@ class AgentPickSAC(AgentBase):
         if np.random.rand() > self.epsilon:
             action, action_key, actions = self.policy.select_action(self.memory[:,:,:,0],valid_moves, valid_keys)
             actions = actions.detach().tolist()
+            cf_action, cf_action_key, cf_actions = self.random_move(valid_moves, valid_keys)
         else:
             action, action_key, actions = self.random_move(valid_moves, valid_keys)
-        
+            cf_action, cf_action_key, cf_actions = self.random_move(valid_moves, valid_keys)
         return action, action_key, actions
 
     def random_move(self, valid_moves, valid_keys):
@@ -301,11 +303,12 @@ class AgentPickSAClimited(AgentBase):
         self.comms_channel = None
         # memory bank the size of the field.        
         # initialize the learner
-        self.policy = SACLimited(2+num_trees, 5, 'pick_agent')
+        self.policy = SACLimited(2+num_trees, 5, 'pick_agent_cf_1')
         # epsilon for exploration
         self.epsilon = 0.9 
         self.state = []
         self.prev_state = []
+        self.cf_state = []
         self.action_order = ['left','right','up','down','interact']
         
     def choose_move_tree(self, tree_states, valid_moves, valid_keys, cur_pos):
@@ -338,8 +341,11 @@ class AgentPickSAClimited(AgentBase):
         
         self.state = tree_states + cur_pos
         
-    def update_buffer(self, actions, reward):
-        self.policy.update_buffer(self.prev_state, actions, reward, self.state)
+    def update_cf_state(self, tree_states, cur_pos):
+        self.cf_state = tree_states + cur_pos        
+        
+    def update_buffer(self, actions, reward, cf_reward):
+        self.policy.update_buffer(self.prev_state, actions, reward, self.state, cf_reward, self.cf_state)
         
     def reset_agent(self):
         # TODO: Used to reset the agent after each episode
@@ -358,7 +364,7 @@ class AgentPruneSAClimited(AgentBase):
         self.comms_channel = None
         # memory bank the size of the field.        
         # initialize the learner
-        self.policy = SACLimited(2+num_trees, 5)
+        self.policy = SACLimited(2+num_trees, 5, 'prune_agent_cf_1')
         # epsilon for exploration
         self.epsilon = 0.9 
         self.state = []
@@ -395,8 +401,11 @@ class AgentPruneSAClimited(AgentBase):
         
         self.state = tree_states + cur_pos
         
-    def update_buffer(self, actions, reward):
-        self.policy.update_buffer(self.prev_state, actions, reward, self.state)
+    def update_cf_state(self, tree_states, cur_pos):
+        self.cf_state = tree_states + cur_pos 
+        
+    def update_buffer(self, actions, reward, cf_reward):
+        self.policy.update_buffer(self.prev_state, actions, reward, self.state, cf_reward, self.cf_state)
         
     def reset_agent(self):
         # TODO: Used to reset the agent after each episode

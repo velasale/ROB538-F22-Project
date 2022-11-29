@@ -43,7 +43,7 @@ class ReplayBuffer:
         # Using list instead of deque for access speed and forward rollout access
         self.buffer = list()
 
-    def update_buffer(self, episode_num: int, timestep_num: int, state:list, action:list, reward:list, next_state:list):
+    def update_buffer(self, episode_num: int, timestep_num: int, state:list, action:list, reward:list, next_state:list, cf_reward:list, cf_state:list):
         """
         Method adds a timestep using the state, action and reward get functions given the episode_num and
         timestep_num from the Simmanager. 
@@ -53,7 +53,8 @@ class ReplayBuffer:
         :type timestep_num: int
         """
         tstep = {'episode':episode_num, 'timestep':timestep_num, 'state':state,
-                         'action':action, 'reward':reward, 'next_state':next_state}
+                         'action':action, 'reward':reward, 'next_state':next_state,
+                         'cf_reward':cf_reward, 'cf_state':cf_state}
         self.buffer.append(tstep)
 
     def save_buffer(self, file_path: str = None):
