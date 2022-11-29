@@ -17,11 +17,13 @@ from torch.utils.tensorboard import SummaryWriter
 import pandas as pd
 import pickle as pkl
 from queue import PriorityQueue, Queue
+from collections import deque
 
 # Why do we save things as timesteps when there aren't any methods? Why not save as a dictionary since we need to make it a dictionary at some point down the line?
 
+
 class ReplayBuffer:
-    def __init__(self, buffer_size: int = 40000, no_delete=False):
+    def __init__(self, buffer_size: int = 50000, no_delete=False):
         '''
         Constructor takes in the necessary state, action, reward objects and sets the parameters of the 
         replay buffer. Currently only even sampling is supported by this replay buffer (no weighted transitions)
@@ -41,9 +43,11 @@ class ReplayBuffer:
         self.prev_timestep = None
 
         # Using list instead of deque for access speed and forward rollout access
-        self.buffer = list()
+        self.buffer = deque(maxlen=buffer_size)
+        #self.buffer = []
 
-    def update_buffer(self, episode_num: int, timestep_num: int, state:list, action:list, reward:list, next_state:list):
+    def update_buffer(self, episode_num: int, timestep_num: int, state: list, action: list, reward: list,
+                      next_state: list):
         """
         Method adds a timestep using the state, action and reward get functions given the episode_num and
         timestep_num from the Simmanager. 
@@ -52,9 +56,75 @@ class ReplayBuffer:
         :type episode_num: int
         :type timestep_num: int
         """
-        tstep = {'episode':episode_num, 'timestep':timestep_num, 'state':state,
-                         'action':action, 'reward':reward, 'next_state':next_state}
+        tstep = {'episode': episode_num, 'timestep': timestep_num, 'state': state,
+                 'action': action, 'reward': reward, 'next_state': next_state}
         self.buffer.append(tstep)
+
+    def update_buffer_list(self, tstep_list, opposite_state):
+        """
+        Method adds a timestep using the state, action and reward get functions given the episode_num and
+        timestep_num from the Simmanager. 
+        :param episode_num: Episode number.
+        :param timestep_num: Timestep number.
+        :type episode_num: int
+        :type timestep_num: int
+        """
+        for i in range(len(tstep_list)):
+            coordinates = tstep_list[i]["state"][-2:]
+            tstep_list[i]["state"] = opposite_state + coordinates
+            self.buffer.append(tstep_list[i])
+
+    def update_buffer_shared(self, episode_num: int, timestep_num: int, state: list, action: list, reward: list,
+                             next_state: list):
+        """
+        Method adds a timestep using the state, action and reward get functions given the episode_num and
+        timestep_num from the Simmanager. 
+        :param episode_num: Episode number.
+        :param timestep_num: Timestep number.
+        :type episode_num: int
+        :type timestep_num: int
+        """
+        tstep = {'episode': episode_num, 'timestep': timestep_num, 'state': state,
+                 'action': action, 'reward': reward, 'next_state': next_state}
+        self.buffer.append(tstep)
+        return tstep
+
+    def update_buffer_rollback_reward(
+            self, episode_num: int, rollback: int, rollback_reward: int, rollback_decay: float):
+        """
+        Method adds a timestep using the state, action and reward get functions given the episode_num and
+        timestep_num from the Simmanager. 
+        :param episode_num: Episode number.
+        :param timestep_num: Timestep number.
+        :type episode_num: int
+        :type timestep_num: int
+        """
+        if len(self.buffer) > rollback:
+            for i in range(rollback):
+                if self.buffer[-(i+1)]["reward"] == 10 or self.buffer[-i]["episode"] != episode_num:
+                    break
+                else:
+                    self.buffer[-(i+1)]["reward"] += rollback_reward * (rollback_decay * (i+1))
+
+    def update_buffer_rollback_reward_shared(
+            self, episode_num: int, rollback: int, rollback_reward: int, rollback_decay: float):
+        """
+        Method adds a timestep using the state, action and reward get functions given the episode_num and
+        timestep_num from the Simmanager. 
+        :param episode_num: Episode number.
+        :param timestep_num: Timestep number.
+        :type episode_num: int
+        :type timestep_num: int
+        """
+        shared = []
+        if len(self.buffer) > rollback:
+            for i in range(rollback):
+                if self.buffer[-(i+1)]["reward"] == 10 or self.buffer[-i]["episode"] != episode_num:
+                    break
+                else:
+                    self.buffer[-(i+1)]["reward"] += rollback_reward * (rollback_decay * (i+1))
+                    shared.append(self.buffer[-(i+1)])
+        return shared
 
     def save_buffer(self, file_path: str = None):
         """
@@ -94,4 +164,3 @@ class ReplayBuffer:
             reward2.append(r['reward'])
         max_reward = max(reward2)
         return max_reward
-

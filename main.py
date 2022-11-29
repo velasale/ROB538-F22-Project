@@ -51,24 +51,29 @@ def small_orchard():
         agent_list.append(a)
         agent_list.append(b)
 
+    # large_orchard = orchard.OrchardMap(
+    #     row_height=5, row_description=large_row32, top_buffer=3, bottom_buffer=2,
+    #     action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
+    #     tree_combos=default_tree_combos)
+
     small_orchard = orchard.OrchardMap(
         row_height=10, row_description=small_row8, top_buffer=1, bottom_buffer=1,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
     num_eps = 1000
-    test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=70, ep_max=num_eps)
+    test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=200, ep_max=num_eps)
     # test.run_gui()
     # To run without GUI (Way faster)
     test.run()
     num_rewards = np.array(test.map.rewards)
-    plt.plot(range(num_eps),num_rewards[:,0])
-    plt.plot(range(num_eps),num_rewards[:,1])
-    plt.legend(['picked apples','pruned trees'])
+    plt.plot(range(num_eps), num_rewards[:, 0])
+    plt.plot(range(num_eps), num_rewards[:, 1], alpha=.4)
+    plt.legend(['picked apples', 'pruned trees'])
     plt.show()
     plt.clf()
-    plt.plot(range(len(test.map.rewards[0])),test.map.rewards[0])
-    plt.plot(range(len(test.map.rewards[-1])),test.map.rewards[-1])
-    plt.legend(['first','last'])
+    plt.plot(range(len(test.map.rewards[0])), test.map.rewards[0])
+    plt.plot(range(len(test.map.rewards[-1])), test.map.rewards[-1])
+    plt.legend(['first', 'last'])
 
 
 def small_orchard_single():
@@ -84,18 +89,20 @@ def small_orchard_single():
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
     num_eps = 100
-    test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=70, ep_max=num_eps)
+    test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=200, ep_max=num_eps)
     # test.run_gui()
     # To run without GUI (Way faster)
     test.run()
     num_rewards = [sum(rew) for rew in test.map.rewards]
     print(num_rewards)
-    plt.plot(range(num_eps),num_rewards)
+    plt.plot(range(num_eps), num_rewards)
     plt.show()
     plt.clf()
-    plt.plot(range(len(test.map.rewards[0])),test.map.rewards[0])
-    plt.plot(range(len(test.map.rewards[-1])),test.map.rewards[-1])
-    plt.legend(['first','last'])
+    plt.plot(range(len(test.map.rewards[0])), test.map.rewards[0])
+    plt.plot(range(len(test.map.rewards[-1])), test.map.rewards[-1])
+    plt.legend(['first', 'last'])
+
+
 if __name__ == "__main__":
     test = small_orchard()
     # test = large_orchard()
