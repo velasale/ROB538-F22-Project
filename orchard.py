@@ -197,8 +197,6 @@ class OrchardSim():
         # Code added by Alejo
         self.map.create_reward_map()
         self.reward_flag = 0
-        self.r_map = orchard_map
-        self.r_agents = agents
 
     def run_gui(self):
         # runs gui
@@ -234,10 +232,3 @@ class OrchardSim():
                 i.reward_evolution.append(i.accumulated_reward)
                 i.reset_agent()
             self.map.reset_map(self.agents)
-
-        # # Step3: Plot Results
-        # for i in range(len(self.agents)):
-        #     # tl.plot_reward(self.agents[i].reward_evolution, i)
-        #     tl.plot_reward_and_baseline(self.agents[i].reward_evolution, self.r_agents[i].reward_evolution, i)
-        #     tl.plot_values(self.agents[i].q_sa_table, i)
-        # plt.show()

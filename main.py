@@ -20,15 +20,15 @@ default_prob = [.2, .1, .3, .3, .1]
 default_tree_combos = [1, 2, 3, 4, -10]
 
 # Alejo's To check with only 1 agent and one tree
-default_prob = [0.5, 0.5, 0]
-default_tree_combos = [1, 2, -10]
+default_prob = [1, 0]
+default_tree_combos = [3, -10]
 
 # Design A:
-# small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0]
+small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0]
 
 # Design A:
 # tstep = 500, episodes = 5000, epsilon = 0.99
-small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
+# small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
 
 
 # small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, -20, -10, -10, -20, 0, 0]
@@ -61,7 +61,7 @@ def small_orchard(approach: str):
     # Grid parameters
     top_buffer = 3
     bottom_buffer = 3
-    row_height = 2
+    row_height = 1
 
     # Algorithm parameters
     time_steps = 500
@@ -95,13 +95,15 @@ def small_orchard(approach: str):
 
 if __name__ == "__main__":
 
-    test = small_orchard("local")
+    approach = "diff"
+    test = small_orchard(approach)
     # test_random = small_orchard("random")
 
     for i in range(len(test.agents)):
         tl.plot_reward(test.agents[i].reward_evolution, i)
         # tl.plot_reward_and_baseline(test.agents[i].reward_evolution, test_random.agents[i].reward_evolution, i)
         tl.plot_values(test.agents[i].q_sa_table, i)
+    plt.title(approach)
     plt.show()
-
+    a=1
     # test = large_orchard()

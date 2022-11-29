@@ -153,6 +153,7 @@ def global_rewards(agents, map):
         # --- Step 3: Update Q_sa_values of the agent
         i.update_value(i.move, i.move_2, global_reward)
         i.accumulated_reward = i.accumulated_reward + i.reward
+        # i.accumulated_reward = i.accumulated_reward + global_reward
 
         # update our map with our action choice
         map.update_map(i.cur_pose, i.move, i.key, i.id)
@@ -215,7 +216,7 @@ def diff_rewards(agents, map):
 
         # --- Step 3: Update Q_sa_values of the agent
         i.update_value(i.move, i.move_2, diff_reward)
-        i.accumulated_reward = i.accumulated_reward + diff_reward
+        i.accumulated_reward = i.accumulated_reward + i.reward
 
         # update our map with our action choice
         map.update_map(i.cur_pose, i.move, i.key, i.id)
@@ -260,6 +261,7 @@ def plot_reward(rewards_evolution: list, i):
     plt.title(i)
 
 
+
 def plot_reward_and_baseline(rewards_evolution_1: list, rewards_evolution_2, i):
     """
     Plots RL rewards evolution with a shaded background
@@ -270,8 +272,8 @@ def plot_reward_and_baseline(rewards_evolution_1: list, rewards_evolution_2, i):
     fig = plt.figure()
     average_data_1 = []
     average_data_2 = []
-    window = len(rewards_evolution_1) // 15
-    color = 'blue'
+    window = len(rewards_evolution_1) // 25
+
 
     # Step 1: Obtain the moving average window
     for ind in range(len(rewards_evolution_1) - window + 1):
@@ -283,16 +285,20 @@ def plot_reward_and_baseline(rewards_evolution_1: list, rewards_evolution_2, i):
 
     # Step 2: Plot results
     # alpha sets the transparency of the original data
+    color = 'blue'
     plt.plot(average_data_1, color=color, label=label)
-    plt.plot(rewards_evolution_1, color=color, alpha=0.25, label='Original Data')
+    # plt.plot(rewards_evolution_1, color=color, alpha=0.25, label='Original Data')
     color = 'black'
     plt.plot(average_data_2, color=color, label=label)
-    plt.plot(rewards_evolution_2, color=color, alpha=0.1, label='Random - Original Data')
+    # plt.plot(rewards_evolution_2, color=color, alpha=0.1, label='Random - Original Data')
 
     plt.xlabel("Episodes")
     plt.ylabel("Reward")
     plt.legend()
     plt.title(i)
+
+
+
 
 
 def plot_values(values: list, i):

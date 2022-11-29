@@ -19,7 +19,7 @@ class AgentBase():
         self.q_sa_table = np.zeros((rows, cols))
         self.learning_rate = 0.05
         self.epsilon = 1.0
-        self.epsilon_updater = 0.95
+        self.epsilon_updater = 0.99
         self.gamma = 0.9
         self.accumulated_reward = 0
         self.reward_evolution = []
