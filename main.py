@@ -97,6 +97,7 @@ if __name__ == "__main__":
 
     approach = "diff"
     test = small_orchard(approach)
+    # test = large_orchard()
     # test_random = small_orchard("random")
 
     for i in range(len(test.agents)):
@@ -106,4 +107,4 @@ if __name__ == "__main__":
     plt.title(approach)
     plt.show()
     a=1
-    # test = large_orchard()
+

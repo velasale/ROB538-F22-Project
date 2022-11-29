@@ -216,7 +216,70 @@ def diff_rewards(agents, map):
 
         # --- Step 3: Update Q_sa_values of the agent
         i.update_value(i.move, i.move_2, diff_reward)
-        i.accumulated_reward = i.accumulated_reward + i.reward
+        i.accumulated_reward = i.accumulated_reward + diff_reward
+
+        # update our map with our action choice
+        map.update_map(i.cur_pose, i.move, i.key, i.id)
+        # if we moved from a spot we need to update the agents internal current position
+        if i.key != "interact":
+            i.cur_pose = i.move
+
+        # Update epsilon
+        i.update_epsilon()
+
+        if i.reward == 10:
+            # Update reward map
+            map.reward_map[i.move[0]][i.move[1]] = -1
+
+    return agents, map
+
+
+def dpp_rewards(agents, map):
+    """
+    Temporal Difference - Global Rewards
+    :param agents:
+    :param map:
+    :param steps:
+    :return:
+    """
+
+    # main control loop for all agents
+    for i in agents:
+        # get valid moves for agent
+        valid_moves, valid_keys = map.get_valid_moves(i.cur_pose, i.action_type, i.id)
+        # if we have a valid move continue
+        if len(valid_keys) > 0:
+            # get the surrounding area with sensors
+            points, vals = map.get_surroundings(i.cur_pose, 3)
+            # print("Valid moves and valid keys are: ", valid_moves, valid_keys)
+
+            # --- Step 1: Take next action ---
+            # a - Observe next state
+            i.move, i.key = i.choose_move(points, vals, valid_moves, valid_keys)
+
+            # b. Observe reward
+            i.reward = map.reward_map[i.move[0]][i.move[1]]
+
+            # --- Step 2: Choose A_prime from S_prime
+            valid_moves_prime, valid_keys_prime = map.get_valid_moves(i.move, i.action_type, i.id)
+            i.move_2, key_2 = i.choose_move(points, vals, valid_moves_prime, valid_keys_prime)
+
+    global_reward = 0
+    for i in agents:
+        global_reward += i.reward
+
+    for i in agents:
+        # Obtain the Counterfactual reward
+        others_reward = 0
+        for j in agents:
+            if j != i:
+                others_reward = others_reward + j.reward
+
+        diff_reward = global_reward - others_reward
+
+        # --- Step 3: Update Q_sa_values of the agent
+        i.update_value(i.move, i.move_2, diff_reward)
+        i.accumulated_reward = i.accumulated_reward + diff_reward
 
         # update our map with our action choice
         map.update_map(i.cur_pose, i.move, i.key, i.id)
