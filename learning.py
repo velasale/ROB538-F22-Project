@@ -66,8 +66,19 @@ class DiscreteLearning():
         agent_actions = self.qtable[state_for_table[0]][state_for_table[1]][state_for_table[2]][state_for_table[3]][state_for_table[4]][state_for_table[5]][state_for_table[6]][state_for_table[7]]
         
         actions = np.argsort(agent_actions).detach().tolist()
-        if 'interact' in action_keys:
-            pass
+        for action in actions[::-1]:
+            if self.action_key[action] in action_keys:
+                indexthing = action_keys.index(self.action_key[action])
+                return possible_actions[indexthing], self.action_key[action]
+            else:
+                self.count +=1 
+                self.qtable[state_for_table[0]][state_for_table[1]][state_for_table[2]][state_for_table[3]][state_for_table[4]][state_for_table[5]][state_for_table[6]][state_for_table[7]][action] = -10
+
+    def select_action_apple(self, state_for_table, possible_actions, action_keys):
+        # yes i know its nasty
+        agent_actions = self.qtable[state_for_table[0]][state_for_table[1]][state_for_table[2]][state_for_table[3]][state_for_table[4]][state_for_table[5]][state_for_table[6]][state_for_table[7]]
+        
+        actions = np.argsort(agent_actions).detach().tolist()
         for action in actions[::-1]:
             if self.action_key[action] in action_keys:
                 indexthing = action_keys.index(self.action_key[action])
@@ -82,6 +93,13 @@ class DiscreteLearning():
     def get_max(self, state):
         a = np.argmax(self.qtable[state])
         return a[0]
+
+    def train_apple(self, init_state, action, reward, init_next_state):
+        action_ind = self.action_key.index(action)
+        self.qtable[init_state[0]][init_state[1]][init_state[2]][init_state[3]][init_state[4]][init_state[5]][init_state[6]][init_state[7]][action_ind] += \
+        self.learning_rate*(reward + self.gamma*torch.max(self.qtable[init_next_state[0]][init_next_state[1]][init_next_state[2]][init_next_state[3]][init_next_state[4]][init_next_state[5]][init_next_state[6]][init_next_state[7]][:]) - 
+                            self.qtable[init_state[0]][init_state[1]][init_state[2]][init_state[3]][init_state[4]][init_state[5]][init_state[6]][init_state[7]][action_ind])
+
 
     def update_weight(self, state, state_val, cur_pos, action, reward, next_state, next_state_val, next_pos):
         # fix the state stuff so that its like we expect it
@@ -165,7 +183,7 @@ class ConvolutionLearning():
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(Actor, self).__init__()
-
+        print(state_dim)
         self.l1 = nn.Linear(state_dim, 400)
         torch.nn.init.kaiming_uniform_(self.l1.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
         self.l2 = nn.Linear(400, 300)
@@ -177,9 +195,9 @@ class Actor(nn.Module):
         a = F.relu(self.l1(state))
         a = F.relu(self.l2(a))
         try:
-            return torch.nn.functional.normalize(self.l3(a))
+            return torch.nn.functional.normalize(F.sigmoid(self.l3(a)))
         except IndexError:
-            return self.l3(a) + 0.2
+            return torch.nn.functional.normalize(F.sigmoid(self.l3(a)),dim=0)
 
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -300,12 +318,7 @@ class SAC():
                     # update target networks
             if self.total_it % self.network_repl_freq == 0:
                 self.update_target()
-                # self.u_count +=1
-                # print('updated ', self.u_count,' times')
-                # print('critic of state and action')
-                # print(self.critic(state, self.actor(state)))
-                # print('target q - current q')
-                # print(target_Q-current_Q)
+
             return actor_loss.item(), critic_loss.item()
         
     def update_target(self):
@@ -316,3 +329,115 @@ class SAC():
         for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
+class SACLimited():
+    def __init__(self, state_dim, action_dim, TensorboardName=None):
+        self.gamma = 0.9
+        self.learning_rate = 1
+        self.tau = 0.01
+        self.actor = Actor(state_dim, action_dim).to(device)
+        self.actor_target = copy.deepcopy(self.actor)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-4)
+        self.critic = Critic(state_dim, action_dim).to(device)
+        self.critic_target = copy.deepcopy(self.critic)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-4, weight_decay=1e-4)
+        self.action_order = ['left','right','up','down','interact']
+        self.replay_buffer = ReplayBuffer()
+        self.batch_size = 20
+        self.enum = 0
+        self.tnum = 0
+        self.total_it = 0
+        self.network_repl_freq = 2
+        if TensorboardName is None:
+            self.writer = SummaryWriter()
+        else:
+            self.writer = SummaryWriter('runs/'+TensorboardName)
+            
+    def select_action(self, tree_states, possible_actions, action_keys, cur_pos):
+        collapsed_state = torch.tensor(tree_states+cur_pos)
+        collapsed_state = torch.flatten(collapsed_state)
+        collapsed_state = collapsed_state.to(device)
+        actions = self.actor(collapsed_state.float())
+        action_prob_order = torch.argsort(actions)
+        action_prob_order = action_prob_order.flip(0)
+        for action in action_prob_order:
+            if self.action_order[action] in action_keys:
+                indexthing = action_keys.index(self.action_order[action.item()])
+                return possible_actions[indexthing], self.action_order[action], actions
+    
+    def update_buffer(self,state,action,reward,next_state):
+        self.replay_buffer.update_buffer(self.enum,self.tnum,state,action,reward,next_state)
+        self.tnum += 1
+        
+    def end_episode(self):
+        self.tnum = 0
+        self.enum +=1
+
+    def get_max(self, state):
+        a = np.argmax(self.qtable[state])
+        return a[0]
+
+    def train(self):
+        if len(self.replay_buffer) > self.batch_size:
+            sample = self.replay_buffer.sample(self.batch_size)
+            state = []
+            action = []
+            reward = []
+            next_state = []
+
+            for timestep in sample:
+                state.append(timestep['state'])
+                # print('timestep state')
+                # print(timestep['state'])
+                action.append(timestep['action'])
+                # print(type(timestep['action']))
+                reward.append(timestep['reward'])
+                next_state.append(timestep['next_state'])
+                
+            state = torch.tensor(state)
+            state = torch.flatten(state, start_dim=1)
+            state = state.to(device).float()
+            action = torch.tensor(action)
+            action = action.to(device).float()
+            reward = torch.tensor(reward)
+            reward = reward.to(device).float()
+
+            next_state = torch.tensor(next_state)
+            next_state = torch.flatten(next_state, start_dim=1)
+            next_state = next_state.to(device).float()
+            action_probabilities = self.actor(state)
+            current_Q = self.critic(state,action).sum(axis=1)
+            next_actions = self.actor_target(next_state)
+            target_Q = self.critic_target(next_state, next_actions).max(axis=1)[0]
+            # print(reward, target_Q)
+
+            target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
+    
+            target_Q = target_Q.float()
+            
+            critic_loss = F.mse_loss(current_Q, target_Q)
+            self.critic_optimizer.zero_grad()
+            critic_loss.backward()
+            self.critic_optimizer.step()
+            
+            actor_loss = -self.critic(state,action_probabilities).sum()
+            self.actor_optimizer.zero_grad()
+            actor_loss.backward()
+            self.actor_optimizer.step()
+            
+            self.writer.add_scalar('Loss/critic',critic_loss.detach(),self.total_it)
+            self.writer.add_scalar('Loss/actor',actor_loss.detach(),self.total_it)
+            self.total_it +=1
+            
+                    # update target networks
+            if self.total_it % self.network_repl_freq == 0:
+                self.update_target()
+
+            return actor_loss.item(), critic_loss.item()
+        
+    def update_target(self):
+        # Update the frozen target models
+        for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
+            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+
+        for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
+            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)

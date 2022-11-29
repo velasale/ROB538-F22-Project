@@ -2,13 +2,13 @@ import orchard_agents
 # import pygame_render
 import orchard
 import matplotlib.pyplot as plt
-# import numpy as np
+import numpy as np
 
 # -20 is action zone, 0 is nothing, -10 is tree
 large_row32 = [0, 0, -20, -10, -10, -20, 0, 0, -20, -10, -10, -20, 0,
                0, -20, -10, -10, -20, 0, 0, -20, -10, -10, -20, 0, 0,
                -20, -10, -10, -20, 0, 0]
-small_row8 = [-20, -10, -10, -20, 0]
+small_row8 = [-20, -10, -10, -20, -20, -10, -10, -20]
 
 
 # action flow ( ex: 3 -> 2 -> -10(done) )
@@ -46,16 +46,44 @@ def small_orchard():
     # 8x13
     agent_list = []
     for i in range(1):
-        a = orchard_agents.AgentPickSAC()
+        a = orchard_agents.AgentPickSAClimited(40)
+        b = orchard_agents.AgentPruneSAClimited(40)
         agent_list.append(a)
-    # for i in range(1):
-    #     a = orchard_agents.AgentPrune()
-    #     agent_list.append(a)
+        agent_list.append(b)
+
     small_orchard = orchard.OrchardMap(
-        row_height=8, row_description=small_row8, top_buffer=1, bottom_buffer=1,
+        row_height=10, row_description=small_row8, top_buffer=1, bottom_buffer=1,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
     num_eps = 1000
+    test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=70, ep_max=num_eps)
+    # test.run_gui()
+    # To run without GUI (Way faster)
+    test.run()
+    num_rewards = np.array(test.map.rewards)
+    plt.plot(range(num_eps),num_rewards[:,0])
+    plt.plot(range(num_eps),num_rewards[:,1])
+    plt.legend(['picked apples','pruned trees'])
+    plt.show()
+    plt.clf()
+    plt.plot(range(len(test.map.rewards[0])),test.map.rewards[0])
+    plt.plot(range(len(test.map.rewards[-1])),test.map.rewards[-1])
+    plt.legend(['first','last'])
+
+
+def small_orchard_single():
+    # 2 agents even split between pick and prune
+    # 8x13
+    agent_list = []
+    for i in range(1):
+        a = orchard_agents.AgentPickSAClimited(40)
+        agent_list.append(a)
+
+    small_orchard = orchard.OrchardMap(
+        row_height=10, row_description=small_row8, top_buffer=1, bottom_buffer=1,
+        action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
+        tree_combos=default_tree_combos)
+    num_eps = 100
     test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=70, ep_max=num_eps)
     # test.run_gui()
     # To run without GUI (Way faster)
@@ -68,7 +96,6 @@ def small_orchard():
     plt.plot(range(len(test.map.rewards[0])),test.map.rewards[0])
     plt.plot(range(len(test.map.rewards[-1])),test.map.rewards[-1])
     plt.legend(['first','last'])
-
 if __name__ == "__main__":
     test = small_orchard()
     # test = large_orchard()
