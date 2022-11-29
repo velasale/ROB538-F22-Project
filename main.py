@@ -56,7 +56,7 @@ def small_orchard():
         row_height=10, row_description=small_row8, top_buffer=1, bottom_buffer=1,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
-    num_eps = 10
+    num_eps = 1000
     test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=100, ep_max=num_eps)
     # test.run_gui()
     # To run without GUI (Way faster)
@@ -74,12 +74,13 @@ def small_orchard():
     plt.clf()
     
     num_rewards = np.array(test.map.rewards)
-    plt.plot(range(num_eps),num_rewards[:,0])
-    plt.plot(range(num_eps),num_rewards[:,1])
+    num_trees = np.array(test.map.num_trees)
+    plt.plot(range(num_eps),num_rewards[:,0]/num_trees[:-1,0]*100)
+    plt.plot(range(num_eps),num_rewards[:,1]/num_trees[:-1,1]*100)
     plt.legend(['Picked Apples','Pruned Trees'])
     plt.title('Picked and Pruned Apples per Episode')
     plt.xlabel('Episode')
-    plt.ylabel('Number of Trees Interacted with')
+    plt.ylabel('Percent of Relevant Trees Interacted with')
     plt.show()
 
     
