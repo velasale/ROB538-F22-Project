@@ -104,9 +104,11 @@ class DiscreteLearning():
         self.qtable[init_state[0]][init_state[1]][init_state[2]][init_state[3]][init_state[4]][init_state[5]][
             init_state[6]][init_state[7]][action_ind] += self.learning_rate * (reward + self.gamma * torch.max(
                 self.
-                qtable[init_next_state[0]][init_next_state[1]][init_next_state[2]][init_next_state[3]]
+                qtable[init_next_state[0]][init_next_state[1]
+                                           ][init_next_state[2]][init_next_state[3]]
                 [init_next_state[4]][init_next_state[5]][init_next_state[6]][init_next_state[7]][:]) - self.
-            qtable[init_state[0]][init_state[1]][init_state[2]][init_state[3]][init_state[4]][init_state[5]]
+            qtable[init_state[0]][init_state[1]][init_state[2]
+                                                 ][init_state[3]][init_state[4]][init_state[5]]
             [init_state[6]][init_state[7]][action_ind])
 
     def update_weight(self, state, state_val, cur_pos, action, reward, next_state, next_state_val, next_pos):
@@ -163,9 +165,11 @@ class DiscreteLearning():
         self.qtable[init_state[0]][init_state[1]][init_state[2]][init_state[3]][init_state[4]][init_state[5]][
             init_state[6]][init_state[7]][action_ind] += self.learning_rate * (reward + self.gamma * torch.max(
                 self.
-                qtable[init_next_state[0]][init_next_state[1]][init_next_state[2]][init_next_state[3]]
+                qtable[init_next_state[0]][init_next_state[1]
+                                           ][init_next_state[2]][init_next_state[3]]
                 [init_next_state[4]][init_next_state[5]][init_next_state[6]][init_next_state[7]][:]) - self.
-            qtable[init_state[0]][init_state[1]][init_state[2]][init_state[3]][init_state[4]][init_state[5]]
+            qtable[init_state[0]][init_state[1]][init_state[2]
+                                                 ][init_state[3]][init_state[4]][init_state[5]]
             [init_state[6]][init_state[7]][action_ind])
 
 
@@ -199,11 +203,14 @@ class Actor(nn.Module):
         super(Actor, self).__init__()
         print(state_dim)
         self.l1 = nn.Linear(state_dim, 400)
-        torch.nn.init.kaiming_uniform_(self.l1.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        torch.nn.init.kaiming_uniform_(
+            self.l1.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
         self.l2 = nn.Linear(400, 300)
-        torch.nn.init.kaiming_uniform_(self.l2.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        torch.nn.init.kaiming_uniform_(
+            self.l2.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
         self.l3 = nn.Linear(300, action_dim)
-        torch.nn.init.kaiming_uniform_(self.l3.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        torch.nn.init.kaiming_uniform_(
+            self.l3.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
 
     def forward(self, state):
         a = F.relu(self.l1(state))
@@ -220,11 +227,14 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.leaky = nn.LeakyReLU()
         self.l1 = nn.Linear(state_dim, 400)
-        torch.nn.init.kaiming_uniform_(self.l1.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        torch.nn.init.kaiming_uniform_(
+            self.l1.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
         self.l2 = nn.Linear(400, 300)
-        torch.nn.init.kaiming_uniform_(self.l2.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        torch.nn.init.kaiming_uniform_(
+            self.l2.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
         self.l3 = nn.Linear(300, action_dim)
-        torch.nn.init.kaiming_uniform_(self.l3.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        torch.nn.init.kaiming_uniform_(
+            self.l3.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
 
     def forward(self, state, action_probabilities):
         q = F.relu(self.l1(state))
@@ -240,10 +250,12 @@ class SAC():
         self.tau = 0.01
         self.actor = Actor(state_dim, action_dim).to(device)
         self.actor_target = copy.deepcopy(self.actor)
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-4)
+        self.actor_optimizer = torch.optim.Adam(
+            self.actor.parameters(), lr=1e-4)
         self.critic = Critic(state_dim, action_dim).to(device)
         self.critic_target = copy.deepcopy(self.critic)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-4, weight_decay=1e-4)
+        self.critic_optimizer = torch.optim.Adam(
+            self.critic.parameters(), lr=1e-4, weight_decay=1e-4)
         self.action_order = ['left', 'right', 'up', 'down', 'interact']
         self.replay_buffer = ReplayBuffer()
         self.batch_size = 20
@@ -265,11 +277,13 @@ class SAC():
         action_prob_order = action_prob_order.flip(0)
         for action in action_prob_order:
             if self.action_order[action] in action_keys:
-                indexthing = action_keys.index(self.action_order[action.item()])
+                indexthing = action_keys.index(
+                    self.action_order[action.item()])
                 return possible_actions[indexthing], self.action_order[action], actions
 
     def update_buffer(self, state, action, reward, next_state):
-        self.replay_buffer.update_buffer(self.enum, self.tnum, state, action, reward, next_state)
+        self.replay_buffer.update_buffer(
+            self.enum, self.tnum, state, action, reward, next_state)
         self.tnum += 1
 
     def end_episode(self):
@@ -313,7 +327,8 @@ class SAC():
             next_actions = self.actor_target(next_state)
             target_Q = self.critic_target(next_state, next_actions).sum()
 
-            target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
+            # bellman equation
+            target_Q = reward + (self.gamma * target_Q).detach()
 
             target_Q = target_Q.float()
 
@@ -327,8 +342,10 @@ class SAC():
             actor_loss.backward()
             self.actor_optimizer.step()
 
-            self.writer.add_scalar('Loss/critic', critic_loss.detach(), self.total_it)
-            self.writer.add_scalar('Loss/actor', actor_loss.detach(), self.total_it)
+            self.writer.add_scalar(
+                'Loss/critic', critic_loss.detach(), self.total_it)
+            self.writer.add_scalar(
+                'Loss/actor', actor_loss.detach(), self.total_it)
             self.total_it += 1
 
             # update target networks
@@ -340,26 +357,31 @@ class SAC():
     def update_target(self):
         # Update the frozen target models
         for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data)
 
         for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data)
 
 
 class SACLimited():
-    def __init__(self, state_dim, action_dim, TensorboardName=None):
+    def __init__(self, state_dim, action_dim, opposite_buffer, shared_buffer, TensorboardName=None):
         self.gamma = 0.9
         self.learning_rate = 1
         self.tau = 0.01
         self.actor = Actor(state_dim, action_dim).to(device)
         self.actor_target = copy.deepcopy(self.actor)
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-4)
+        self.actor_optimizer = torch.optim.Adam(
+            self.actor.parameters(), lr=1e-4)
         self.critic = Critic(state_dim, action_dim).to(device)
         self.critic_target = copy.deepcopy(self.critic)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-4, weight_decay=1e-4)
+        self.critic_optimizer = torch.optim.Adam(
+            self.critic.parameters(), lr=1e-4, weight_decay=1e-4)
         self.action_order = ['left', 'right', 'up', 'down', 'interact']
         self.replay_buffer = ReplayBuffer()
-        self.replay_buffer_shared = ReplayBuffer()
+        self.replay_buffer_shared = shared_buffer
+        self.replay_buffer_opposite = opposite_buffer
         self.batch_size = 50
         self.enum = 0
         self.tnum = 0
@@ -379,14 +401,16 @@ class SACLimited():
         action_prob_order = action_prob_order.flip(0)
         for action in action_prob_order:
             if self.action_order[action] in action_keys:
-                indexthing = action_keys.index(self.action_order[action.item()])
+                indexthing = action_keys.index(
+                    self.action_order[action.item()])
                 return possible_actions[indexthing], self.action_order[action], actions
 
     def update_buffer(self, state, action, reward, next_state):
         if reward > 0:
             self.replay_buffer.update_buffer_rollback_reward(
                 self.enum, rollback=1, rollback_reward=reward, rollback_decay=0.5)
-        self.replay_buffer.update_buffer(self.enum, self.tnum, state, action, reward, next_state)
+        self.replay_buffer.update_buffer(
+            self.enum, self.tnum, state, action, reward, next_state)
         self.tnum += 1
 
     def update_buffer_shared(self, state, action, reward, next_state, other_state):
@@ -395,9 +419,10 @@ class SACLimited():
                 self.enum, rollback=1, rollback_reward=reward, rollback_decay=0.5)
             shared.append(self.replay_buffer.update_buffer_shared(
                 self.enum, self.tnum, state, action, reward, next_state))
-            self.replay_buffer_shared.update_buffer_list(shared, other_state)
+            self.replay_buffer_opposite.update_buffer_list(shared, other_state)
 
-        self.replay_buffer.update_buffer(self.enum, self.tnum, state, action, reward, next_state)
+        self.replay_buffer.update_buffer(
+            self.enum, self.tnum, state, action, reward, next_state)
         self.tnum += 1
 
     def end_episode(self):
@@ -439,10 +464,12 @@ class SACLimited():
             action_probabilities = self.actor(state)
             current_Q = self.critic(state, action).sum(axis=1)
             next_actions = self.actor_target(next_state)
-            target_Q = self.critic_target(next_state, next_actions).max(axis=1)[0]
+            target_Q = self.critic_target(
+                next_state, next_actions).max(axis=1)[0]
             # print(reward, target_Q)
 
-            target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
+            # bellman equation
+            target_Q = reward + (self.gamma * target_Q).detach()
 
             target_Q = target_Q.float()
 
@@ -456,8 +483,10 @@ class SACLimited():
             actor_loss.backward()
             self.actor_optimizer.step()
 
-            self.writer.add_scalar('Loss/critic', critic_loss.detach(), self.total_it)
-            self.writer.add_scalar('Loss/actor', actor_loss.detach(), self.total_it)
+            self.writer.add_scalar(
+                'Loss/critic', critic_loss.detach(), self.total_it)
+            self.writer.add_scalar(
+                'Loss/actor', actor_loss.detach(), self.total_it)
             self.total_it += 1
 
             # update target networks
@@ -472,7 +501,8 @@ class SACLimited():
                 sample = self.replay_buffer.sample(self.batch_size)
             else:
                 sample = self.replay_buffer.sample(self.batch_size - 10)
-                sample = sample + self.replay_buffer_shared.sample(self.batch_size - 40)
+                sample = sample + \
+                    self.replay_buffer_shared.sample(self.batch_size - 40)
 
             state = []
             action = []
@@ -502,10 +532,12 @@ class SACLimited():
             action_probabilities = self.actor(state)
             current_Q = self.critic(state, action).sum(axis=1)
             next_actions = self.actor_target(next_state)
-            target_Q = self.critic_target(next_state, next_actions).max(axis=1)[0]
+            target_Q = self.critic_target(
+                next_state, next_actions).max(axis=1)[0]
             # print(reward, target_Q)
 
-            target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
+            # bellman equation
+            target_Q = reward + (self.gamma * target_Q).detach()
 
             target_Q = target_Q.float()
 
@@ -519,8 +551,10 @@ class SACLimited():
             actor_loss.backward()
             self.actor_optimizer.step()
 
-            self.writer.add_scalar('Loss/critic', critic_loss.detach(), self.total_it)
-            self.writer.add_scalar('Loss/actor', actor_loss.detach(), self.total_it)
+            self.writer.add_scalar(
+                'Loss/critic', critic_loss.detach(), self.total_it)
+            self.writer.add_scalar(
+                'Loss/actor', actor_loss.detach(), self.total_it)
             self.total_it += 1
 
             # update target networks
@@ -532,7 +566,9 @@ class SACLimited():
     def update_target(self):
         # Update the frozen target models
         for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data)
 
         for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data)

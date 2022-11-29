@@ -43,8 +43,8 @@ class ReplayBuffer:
         self.prev_timestep = None
 
         # Using list instead of deque for access speed and forward rollout access
-        self.buffer = deque(maxlen=buffer_size)
-        #self.buffer = []
+        #self.buffer = deque(maxlen=buffer_size)
+        self.buffer = []
 
     def update_buffer(self, episode_num: int, timestep_num: int, state: list, action: list, reward: list,
                       next_state: list):
@@ -104,7 +104,8 @@ class ReplayBuffer:
                 if self.buffer[-(i+1)]["reward"] == 10 or self.buffer[-i]["episode"] != episode_num:
                     break
                 else:
-                    self.buffer[-(i+1)]["reward"] += rollback_reward * (rollback_decay * (i+1))
+                    self.buffer[-(i+1)]["reward"] += rollback_reward * \
+                        (rollback_decay * (i+1))
 
     def update_buffer_rollback_reward_shared(
             self, episode_num: int, rollback: int, rollback_reward: int, rollback_decay: float):
@@ -122,7 +123,8 @@ class ReplayBuffer:
                 if self.buffer[-(i+1)]["reward"] == 10 or self.buffer[-i]["episode"] != episode_num:
                     break
                 else:
-                    self.buffer[-(i+1)]["reward"] += rollback_reward * (rollback_decay * (i+1))
+                    self.buffer[-(i+1)]["reward"] += rollback_reward * \
+                        (rollback_decay * (i+1))
                     shared.append(self.buffer[-(i+1)])
         return shared
 

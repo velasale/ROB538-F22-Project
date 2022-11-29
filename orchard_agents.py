@@ -115,14 +115,16 @@ class AgentBase():
 
     def encode_memory(self):
         # yes this is slow, ill optimize later if needed
-        one_hot_memory = torch.zeros([self.field_size[0], self.field_size[1], 8])
+        one_hot_memory = torch.zeros(
+            [self.field_size[0], self.field_size[1], 8])
         for i, row in enumerate(self.memory):
             for j, point in enumerate(row):
                 one_hot_memory[i, j, point] = 1
         return one_hot_memory
 
     def update_buffer(self, actions, reward):
-        self.policy.update_buffer(self.prev_state[:, :, :, 0], actions, reward, self.memory[:, :, :, 0])
+        self.policy.update_buffer(
+            self.prev_state[:, :, :, 0], actions, reward, self.memory[:, :, :, 0])
 
 
 class AgentPickDiscrete(AgentBase):
@@ -155,7 +157,8 @@ class AgentPickDiscrete(AgentBase):
         # points is a list of the observed points, observed vals is a list of corresponding id of each x,y
         # returns the [x,y] of next move and the key: up, down, left, right or interact
         if np.random.rand() > self.epsilon:
-            action, action_key = self.policy.select_action_apple(appleness, valid_moves, valid_keys)
+            action, action_key = self.policy.select_action_apple(
+                appleness, valid_moves, valid_keys)
         else:
             action, action_key = self.random_move(valid_moves, valid_keys)
 
@@ -219,10 +222,12 @@ class AgentPickSAC(AgentBase):
         # returns the [x,y] of next move and the key: up, down, left, right or interact
         # print(self.memory[:,:,2,0])
         if np.random.rand() > self.epsilon:
-            action, action_key, actions = self.policy.select_action(self.memory[:, :, :, 0], valid_moves, valid_keys)
+            action, action_key, actions = self.policy.select_action(
+                self.memory[:, :, :, 0], valid_moves, valid_keys)
             actions = actions.detach().tolist()
         else:
-            action, action_key, actions = self.random_move(valid_moves, valid_keys)
+            action, action_key, actions = self.random_move(
+                valid_moves, valid_keys)
 
         return action, action_key, actions
 
@@ -269,10 +274,12 @@ class AgentPruneSAC(AgentBase):
         # returns the [x,y] of next move and the key: up, down, left, right or interact
         # print(self.memory[:,:,2,0])
         if np.random.rand() > self.epsilon:
-            action, action_key, actions = self.policy.select_action(self.memory[:, :, :, 0], valid_moves, valid_keys)
+            action, action_key, actions = self.policy.select_action(
+                self.memory[:, :, :, 0], valid_moves, valid_keys)
             actions = actions.detach().tolist()
         else:
-            action, action_key, actions = self.random_move(valid_moves, valid_keys)
+            action, action_key, actions = self.random_move(
+                valid_moves, valid_keys)
 
         return action, action_key, actions
 
@@ -287,7 +294,7 @@ class AgentPruneSAC(AgentBase):
 
 
 class AgentPickSAClimited(AgentBase):
-    def __init__(self, num_trees) -> None:
+    def __init__(self, num_trees, opposite_buffer, shared_buffer) -> None:
         self.id = None
         # Class identifier
         self.robot_class = 100
@@ -299,7 +306,8 @@ class AgentPickSAClimited(AgentBase):
         self.comms_channel = None
         # memory bank the size of the field.
         # initialize the learner
-        self.policy = SACLimited(2+num_trees, 5, 'pick_agent')
+        self.policy = SACLimited(2+num_trees, 5,
+                                 opposite_buffer, shared_buffer, "pick_agent")
         # epsilon for exploration
         self.epsilon = 0.9
         self.state = []
@@ -315,10 +323,12 @@ class AgentPickSAClimited(AgentBase):
         self.state = tree_states + cur_pos
 
         if np.random.rand() > self.epsilon:
-            action, action_key, actions = self.policy.select_action(tree_states, valid_moves, valid_keys, cur_pos)
+            action, action_key, actions = self.policy.select_action(
+                tree_states, valid_moves, valid_keys, cur_pos)
             actions = actions.detach().tolist()
         else:
-            action, action_key, actions = self.random_move(valid_moves, valid_keys)
+            action, action_key, actions = self.random_move(
+                valid_moves, valid_keys)
 
         return action, action_key, actions
 
@@ -340,7 +350,8 @@ class AgentPickSAClimited(AgentBase):
         self.policy.update_buffer(self.prev_state, actions, reward, self.state)
 
     def update_buffer_shared(self, actions, reward, opposite_state):
-        self.policy.update_buffer_shared(self.prev_state, actions, reward, self.state, opposite_state)
+        self.policy.update_buffer_shared(
+            self.prev_state, actions, reward, self.state, opposite_state)
 
     def reset_agent(self):
         # TODO: Used to reset the agent after each episode
@@ -348,7 +359,7 @@ class AgentPickSAClimited(AgentBase):
 
 
 class AgentPruneSAClimited(AgentBase):
-    def __init__(self, num_trees) -> None:
+    def __init__(self, num_trees, opposite_buffer, shared_buffer) -> None:
         self.id = None
         # Class identifier
         self.robot_class = 100
@@ -360,7 +371,8 @@ class AgentPruneSAClimited(AgentBase):
         self.comms_channel = None
         # memory bank the size of the field.
         # initialize the learner
-        self.policy = SACLimited(2+num_trees, 5)
+        self.policy = SACLimited(
+            2+num_trees, 5, opposite_buffer, shared_buffer)
         # epsilon for exploration
         self.epsilon = 0.9
         self.state = []
@@ -376,10 +388,12 @@ class AgentPruneSAClimited(AgentBase):
         self.state = tree_states + cur_pos
 
         if np.random.rand() > self.epsilon:
-            action, action_key, actions = self.policy.select_action(tree_states, valid_moves, valid_keys, cur_pos)
+            action, action_key, actions = self.policy.select_action(
+                tree_states, valid_moves, valid_keys, cur_pos)
             actions = actions.detach().tolist()
         else:
-            action, action_key, actions = self.random_move(valid_moves, valid_keys)
+            action, action_key, actions = self.random_move(
+                valid_moves, valid_keys)
 
         return action, action_key, actions
 
@@ -401,7 +415,8 @@ class AgentPruneSAClimited(AgentBase):
         self.policy.update_buffer(self.prev_state, actions, reward, self.state)
 
     def update_buffer_shared(self, actions, reward, opposite_state):
-        self.policy.update_buffer_shared(self.prev_state, actions, reward, self.state, opposite_state)
+        self.policy.update_buffer_shared(
+            self.prev_state, actions, reward, self.state, opposite_state)
 
     def reset_agent(self):
         # TODO: Used to reset the agent after each episode

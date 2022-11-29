@@ -3,6 +3,7 @@ import orchard_agents
 import orchard
 import matplotlib.pyplot as plt
 import numpy as np
+from replaybuffer import ReplayBuffer
 
 # -20 is action zone, 0 is nothing, -10 is tree
 large_row32 = [0, 0, -20, -10, -10, -20, 0, 0, -20, -10, -10, -20, 0,
@@ -35,7 +36,8 @@ def large_orchard():
         row_height=10, row_description=large_row32, top_buffer=3, bottom_buffer=2,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
-    test = orchard.OrchardSim(orchard_map=large_orchard, agents=agent_list, tstep_max=100, ep_max=5)
+    test = orchard.OrchardSim(
+        orchard_map=large_orchard, agents=agent_list, tstep_max=100, ep_max=5)
     # test.run_gui()
     # To run without GUI (Way faster)
     test.run()
@@ -45,9 +47,13 @@ def small_orchard():
     # 2 agents even split between pick and prune
     # 8x13
     agent_list = []
+    shared_a = ReplayBuffer()
+    shared_b = ReplayBuffer()
     for i in range(1):
-        a = orchard_agents.AgentPickSAClimited(40)
-        b = orchard_agents.AgentPruneSAClimited(40)
+        a = orchard_agents.AgentPickSAClimited(
+            40, opposite_buffer=shared_a, shared_buffer=shared_b)
+        b = orchard_agents.AgentPruneSAClimited(
+            40, opposite_buffer=shared_b, shared_buffer=shared_a)
         agent_list.append(a)
         agent_list.append(b)
 
@@ -60,8 +66,9 @@ def small_orchard():
         row_height=10, row_description=small_row8, top_buffer=1, bottom_buffer=1,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
-    num_eps = 1000
-    test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=200, ep_max=num_eps)
+    num_eps = 300
+    test = orchard.OrchardSim(
+        orchard_map=small_orchard, agents=agent_list, tstep_max=70, ep_max=num_eps)
     # test.run_gui()
     # To run without GUI (Way faster)
     test.run()
@@ -89,7 +96,8 @@ def small_orchard_single():
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
     num_eps = 100
-    test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=200, ep_max=num_eps)
+    test = orchard.OrchardSim(
+        orchard_map=small_orchard, agents=agent_list, tstep_max=200, ep_max=num_eps)
     # test.run_gui()
     # To run without GUI (Way faster)
     test.run()
