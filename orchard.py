@@ -3,6 +3,8 @@ import pygame_render
 import pickle as pkl
 # import copy
 # import orchard_agents
+from numpy.random import MT19937
+from numpy.random import RandomState, SeedSequence
 
 
 class OrchardMap():
@@ -42,13 +44,13 @@ class OrchardMap():
         self.num_trees = []
 
     def create_map(self, agents: list = None) -> None:
-        # np.random.seed = 42
+        rng = np.random.default_rng(42)
         # Change every row except for buffer rows to the row_description
         for i in range(self.top_buffer, len(self.orchard_map) - self.bottom_buffer):
             for j in range(len(self.row_description)):
                 # If there is a tree we assign a random weighted action sequence to that tree and put in the representation
                 if self.row_description[j] == -10:
-                    self.orchard_map[i][j] = np.random.choice(self.tree_combos, 1, p=self.tree_prob)
+                    self.orchard_map[i][j] = rng.choice(self.tree_combos, 1, p=self.tree_prob)
                 # otherwise continue
                 else:
                     self.orchard_map[i][j] = self.row_description[j]
@@ -66,6 +68,7 @@ class OrchardMap():
         self.total_apples = np.sum(self.orchard_map == 1) + np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
         self.total_leaves = np.sum(self.orchard_map == 2) + np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
         self.num_trees.append([self.total_apples, self.total_leaves])
+        print(self.num_trees[-1])
 
     def get_surroundings(self, start: list, sight_length: int):
         # Gets the sight_length x sight_length area around the agent
