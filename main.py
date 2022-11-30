@@ -44,7 +44,8 @@ def large_orchard():
 def small_orchard():
     # 2 agents even split between pick and prune
     # 8x13
-    test_name = 'Local_Static_'
+    test_name = 'D1_Static_'
+
     agent_list = []
     for i in range(1):
         a = orchard_agents.AgentPickSAClimited(40, test_name+'Pick')
@@ -56,7 +57,7 @@ def small_orchard():
         row_height=10, row_description=small_row8, top_buffer=1, bottom_buffer=1,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
-    num_eps = 1000
+    num_eps = 10000
     test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=100, ep_max=num_eps)
     # test.run_gui()
     # To run without GUI (Way faster)

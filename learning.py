@@ -421,9 +421,9 @@ class SACLimited():
             # print(reward, target_Q)
 
             #base kit target q
-            target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
+            # target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
             #brainded cf target q
-            # target_Q = reward + (self.gamma * target_Q).detach() - cf_reward
+            target_Q = reward + (self.gamma * target_Q).detach() - cf_reward
             #use next state cf target q
             # cf_actions = self.actor_target(cf_state)
             # target_Q = reward - cf_reward + (self.gamma * target_Q).detach() \
