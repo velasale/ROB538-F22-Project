@@ -44,7 +44,8 @@ def large_orchard():
 def small_orchard():
     # 2 agents even split between pick and prune
     # 8x13
-    test_name = 'CF_1_2_'
+    test_name = 'D1_Static_'
+
     agent_list = []
     for i in range(1):
         a = orchard_agents.AgentPickSAClimited(40, test_name+'Pick')
