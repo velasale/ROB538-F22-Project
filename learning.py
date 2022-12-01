@@ -208,14 +208,14 @@ class Critic(nn.Module):
         torch.nn.init.kaiming_uniform_(self.l1.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
         self.l2 = nn.Linear(400, 300)
         torch.nn.init.kaiming_uniform_(self.l2.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
-        self.l3 = nn.Linear(300, action_dim)
+        self.l3 = nn.Linear(300, 1)
         torch.nn.init.kaiming_uniform_(self.l3.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
 
     def forward(self, state, action_probabilities):
         q = F.relu(self.l1(torch.cat((state,action_probabilities),dim=1)))
         q = F.relu(self.l2(q))
         q = torch.tanh(self.l3(q)) * 10
-        return q * action_probabilities
+        return q
 
 class CriticWeird(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -313,7 +313,7 @@ class SAC():
             # print(next_state.shape)
             current_Q = self.critic(state,action).sum(axis=1)
             next_actions = self.actor_target(next_state)
-            target_Q = self.critic_target(next_state, next_actions).sum()
+            target_Q = self.critic_target(next_state, next_actions)
 
             target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
     
@@ -433,19 +433,21 @@ class SACLimited():
             cf_state = cf_state.to(device).float()
             
             action_probabilities = self.actor(state)
-            current_Q = self.critic(state,action).sum(axis=1)
+            current_Q = self.critic(state,action)
+            current_Q = torch.squeeze(current_Q)
             next_actions = self.actor_target(next_state)
-            target_Q = self.critic_target(next_state, next_actions).max(axis=1)[0]
+            target_Q = self.critic_target(next_state, next_actions)
+            
             # print(reward, target_Q)
-
+            target_Q = torch.squeeze(target_Q)
             #base kit target q
             # target_Q = reward + (self.gamma * target_Q).detach()  # bellman equation
             # brainded cf target q
-            # target_Q = reward + (self.gamma * target_Q).detach() - cf_reward
+            target_Q = reward + (self.gamma * target_Q).detach() - cf_reward
             #use next state cf target q
-            cf_actions = self.actor_target(cf_state)
-            target_Q = reward - cf_reward + (self.gamma * target_Q).detach() \
-                - (self.gamma * self.critic_target(cf_state, cf_actions).max(axis=1)[0]).detach()
+            # cf_actions = self.actor_target(cf_state)
+            # target_Q = reward - cf_reward + (self.gamma * target_Q).detach() \
+            #     - (self.gamma * self.critic_target(cf_state, cf_actions).max(axis=1)[0]).detach()
             
             target_Q = target_Q.float()
             

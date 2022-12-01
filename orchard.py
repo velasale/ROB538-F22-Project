@@ -45,12 +45,16 @@ class OrchardMap():
 
     def create_map(self, agents: list = None) -> None:
         rng = np.random.default_rng(42)
+        # rng = None
         # Change every row except for buffer rows to the row_description
         for i in range(self.top_buffer, len(self.orchard_map) - self.bottom_buffer):
             for j in range(len(self.row_description)):
                 # If there is a tree we assign a random weighted action sequence to that tree and put in the representation
                 if self.row_description[j] == -10:
-                    self.orchard_map[i][j] = rng.choice(self.tree_combos, 1, p=self.tree_prob)
+                    if rng is None:
+                        self.orchard_map[i][j] = np.random.choice(self.tree_combos, 1, p=self.tree_prob)
+                    else:
+                        self.orchard_map[i][j] = rng.choice(self.tree_combos, 1, p=self.tree_prob)
                 # otherwise continue
                 else:
                     self.orchard_map[i][j] = self.row_description[j]
