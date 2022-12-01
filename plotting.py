@@ -51,14 +51,14 @@ cf2_rewards = moving_average(cf2_rewards, smoothness)
 # plt.title('Smoothed Global Reward (x20)')
 # plt.show()
 
-with open("C1_Static_data.pkl",'rb') as f1:
+with open("D1_Static_2data.pkl",'rb') as f1:
     cf1_data = pkl.load(f1)
     
 
 with open("Local_Static_data.pkl",'rb') as f2:
     local_data = pkl.load(f2)
 
-with open("C2_Static_data.pkl",'rb') as f3:
+with open("D2_Static_2data.pkl",'rb') as f3:
     cf2_data = pkl.load(f3)
     
 smoothness = 20
@@ -85,7 +85,7 @@ cf2_rewards = moving_average(cf2_rewards, smoothness)
 plt.plot(range(len(local_rewards)),local_rewards)
 plt.plot(range(len(cf1_rewards)),cf1_rewards)
 plt.plot(range(len(cf2_rewards)),cf2_rewards)
-plt.legend(['Local Reward Only','Counterfactual 1','Counterfactual 2'])
+plt.legend(['Local Reward Only','Difference Reward','Difference Reward + Next State'])
 plt.xlabel('Episode')
 plt.ylabel('Average Global Reward')
 plt.title('Smoothed Global Reward (x20)')

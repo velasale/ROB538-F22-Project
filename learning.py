@@ -204,6 +204,24 @@ class Critic(nn.Module):
         print('state dim, action dim', state_dim, action_dim)
         super(Critic, self).__init__()
         self.leaky = nn.LeakyReLU()
+        self.l1 = nn.Linear(state_dim+action_dim, 400)
+        torch.nn.init.kaiming_uniform_(self.l1.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        self.l2 = nn.Linear(400, 300)
+        torch.nn.init.kaiming_uniform_(self.l2.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+        self.l3 = nn.Linear(300, action_dim)
+        torch.nn.init.kaiming_uniform_(self.l3.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+
+    def forward(self, state, action_probabilities):
+        q = F.relu(self.l1(torch.cat((state,action_probabilities),dim=1)))
+        q = F.relu(self.l2(q))
+        q = torch.tanh(self.l3(q)) * 10
+        return q * action_probabilities
+
+class CriticWeird(nn.Module):
+    def __init__(self, state_dim, action_dim):
+        print('state dim, action dim', state_dim, action_dim)
+        super(Critic, self).__init__()
+        self.leaky = nn.LeakyReLU()
         self.l1 = nn.Linear(state_dim, 400)
         torch.nn.init.kaiming_uniform_(self.l1.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
         self.l2 = nn.Linear(400, 300)

@@ -44,7 +44,7 @@ def large_orchard():
 def small_orchard():
     # 2 agents even split between pick and prune
     # 8x13
-    test_name = 'D2_Static_2'
+    test_name = 'DF1_new_global_new_func_'
 
     agent_list = []
     for i in range(1):
@@ -90,7 +90,7 @@ def small_orchard():
 def small_orchard_single():
     # 2 agents even split between pick and prune
     # 8x13
-    test_name = 'Local'
+    test_name = 'DF1_new_global_'
     agent_list = []
     for i in range(1):
         a = orchard_agents.AgentPickSAClimited(40)
