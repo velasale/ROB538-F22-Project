@@ -177,13 +177,13 @@ class OrchardMap():
                 self.picked_apples += 1
             elif agent_type == 2:
                 self.pruned_trees += 1
-            return self.pruned_trees*self.picked_apples
+            return self.pruned_trees + self.picked_apples
         else:
             # if we move we change our previous location back to the original and update our id location
             self.orchard_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
             self.orchard_map[goal[0]][goal[1]] = agent_id
             self.episode_rewards.append(0)
-            return self.pruned_trees*self.picked_apples
+            return self.pruned_trees + self.picked_apples
         
     def update_cf_map(self, start: list, goal: list, key: str, agent_id: int, agent_type: int) -> None:
 
@@ -196,15 +196,15 @@ class OrchardMap():
         if key == "interact":
             self.cf_map[goal[0]][goal[1]] = self.action_sequence[self.cf_map[goal[0]][goal[1]]]
             if agent_type == 1:
-                temp = self.pruned_trees*(self.picked_apples+1)
+                temp = self.pruned_trees+(self.picked_apples+1)
             else:
-                temp = (self.pruned_trees+1)*self.picked_apples
+                temp = (self.pruned_trees+1)+self.picked_apples
             return temp
         else:
             # if we move we change our previous location back to the original and update our id location
             self.cf_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
             self.cf_map[goal[0]][goal[1]] = agent_id
-            return -1
+            return self.pruned_trees + self.picked_apples
         
     def create_checklist(self):
         # creates a checklist containing all of the x,y location of trees to compare at the end of a timestep
