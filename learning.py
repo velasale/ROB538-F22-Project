@@ -370,8 +370,8 @@ class SACLimited():
         else:
             self.writer = SummaryWriter('runs/'+TensorboardName)
             
-    def select_action(self, tree_states, possible_actions, action_keys, cur_pos):
-        collapsed_state = torch.tensor(tree_states+cur_pos)
+    def select_action(self, tree_states, possible_actions, action_keys, cur_pos, other_pos):
+        collapsed_state = torch.tensor(tree_states+cur_pos+other_pos)
         collapsed_state = torch.flatten(collapsed_state)
         collapsed_state = collapsed_state.to(device)
         actions = self.actor(collapsed_state.float())

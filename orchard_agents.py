@@ -303,7 +303,7 @@ class AgentPickSAClimited(AgentBase):
         self.comms_channel = None
         # memory bank the size of the field.        
         # initialize the learner
-        self.policy = SACLimited(2+num_trees, 5, name)
+        self.policy = SACLimited(4+num_trees, 5, name)
         # epsilon for exploration
         self.epsilon = 0.9 
         self.state = []
@@ -311,16 +311,15 @@ class AgentPickSAClimited(AgentBase):
         self.cf_state = []
         self.action_order = ['left','right','up','down','interact']
         
-    def choose_move_tree(self, tree_states, valid_moves, valid_keys, cur_pos):
+    def choose_move_tree(self, tree_states, valid_moves, valid_keys, cur_pos, other_pos):
         # randomly chooses a valid move
         # points is a list of the observed points, observed vals is a list of corresponding id of each x,y
         # returns the [x,y] of next move and the key: up, down, left, right or interact
         # print(self.memory[:,:,2,0])
-        
-        self.state = tree_states + cur_pos
+        self.state = tree_states + cur_pos + other_pos
         
         if np.random.rand() > self.epsilon:
-            action, action_key, actions = self.policy.select_action(tree_states,valid_moves, valid_keys, cur_pos)
+            action, action_key, actions = self.policy.select_action(tree_states,valid_moves, valid_keys, cur_pos, other_pos)
             actions = actions.detach().tolist()
         else:
             action, action_key, actions = self.random_move(valid_moves, valid_keys)
@@ -336,17 +335,20 @@ class AgentPickSAClimited(AgentBase):
         act[a] = 1
         return valid_moves[choice], valid_keys[choice], act
     
-    def update_next_state(self, tree_states, cur_pos):
+    def update_next_state(self, tree_states, cur_pos, other_pos):
         self.prev_state = self.state.copy()
         
-        self.state = tree_states + cur_pos
+        self.state = tree_states + cur_pos + other_pos
         
-    def update_cf_state(self, tree_states, cur_pos):
-        self.cf_state = tree_states + cur_pos        
+    def update_cf_state(self, tree_states, cur_pos, other_pos):
+        self.cf_state = tree_states + cur_pos +other_pos      
         
     def update_buffer(self, actions, reward, cf_reward):
         self.policy.update_buffer(self.prev_state, actions, reward, self.state, cf_reward, self.cf_state)
         
+    def update_epsilon(self):
+        self.epsilon *= 0.999
+
     def reset_agent(self):
         # TODO: Used to reset the agent after each episode
         pass
@@ -358,7 +360,7 @@ class AgentPruneSAClimited(AgentBase):
     def __init__(self, num_trees, name='none') -> None:
         self.id = None
         # Class identifier
-        self.robot_class = 100
+        self.robot_class = 200
         # Class specific action
         self.action_type = 2
         # current position
@@ -367,23 +369,22 @@ class AgentPruneSAClimited(AgentBase):
         self.comms_channel = None
         # memory bank the size of the field.        
         # initialize the learner
-        self.policy = SACLimited(2+num_trees, 5, name)
+        self.policy = SACLimited(4+num_trees, 5, name)
         # epsilon for exploration
         self.epsilon = 0.9 
         self.state = []
         self.prev_state = []
         self.action_order = ['left','right','up','down','interact']
         
-    def choose_move_tree(self, tree_states, valid_moves, valid_keys, cur_pos):
+    def choose_move_tree(self, tree_states, valid_moves, valid_keys, cur_pos, other_pos):
         # randomly chooses a valid move
         # points is a list of the observed points, observed vals is a list of corresponding id of each x,y
         # returns the [x,y] of next move and the key: up, down, left, right or interact
         # print(self.memory[:,:,2,0])
         
-        self.state = tree_states + cur_pos
-        
+        self.state = tree_states + cur_pos+ other_pos
         if np.random.rand() > self.epsilon:
-            action, action_key, actions = self.policy.select_action(tree_states,valid_moves, valid_keys, cur_pos)
+            action, action_key, actions = self.policy.select_action(tree_states,valid_moves, valid_keys, cur_pos, other_pos)
             actions = actions.detach().tolist()
         else:
             action, action_key, actions = self.random_move(valid_moves, valid_keys)
@@ -399,13 +400,13 @@ class AgentPruneSAClimited(AgentBase):
         act[a] = 1
         return valid_moves[choice], valid_keys[choice], act
     
-    def update_next_state(self, tree_states, cur_pos):
+    def update_next_state(self, tree_states, cur_pos, other_pos):
         self.prev_state = self.state.copy()
         
-        self.state = tree_states + cur_pos
+        self.state = tree_states + cur_pos + other_pos
         
-    def update_cf_state(self, tree_states, cur_pos):
-        self.cf_state = tree_states + cur_pos 
+    def update_cf_state(self, tree_states, cur_pos, other_pos):
+        self.cf_state = tree_states + cur_pos + other_pos
         
     def update_buffer(self, actions, reward, cf_reward):
         self.policy.update_buffer(self.prev_state, actions, reward, self.state, cf_reward, self.cf_state)
@@ -413,6 +414,9 @@ class AgentPruneSAClimited(AgentBase):
     def reset_agent(self):
         # TODO: Used to reset the agent after each episode
         pass
+    
+    def update_epsilon(self):
+        self.epsilon *= 0.999
     
     def save_agent(self, filepath):
         self.policy.save(filepath, 'Prune')

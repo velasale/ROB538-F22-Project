@@ -64,18 +64,20 @@ class OrchardMap():
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         self.checklist, other = self.create_checklist()
         points = np.random.choice(len(other), len(agents))
+        print(agents[0].robot_class)
         for i in range(len(agents)):
             point_ind = points[i]
-            print(other[point_ind])
-            self.orchard_map[other[point_ind][0]][other[point_ind][1]] = agents[i].robot_class
+            print(other[point_ind], agents[i].robot_class)
+            self.orchard_map[other[point_ind][0]][other[point_ind][1]] = agents[i].robot_class + i
             # sets the start pose of agents and the ids
-            agents[i].cur_pose = [0, start + i]
+            agents[i].cur_pose = [other[point_ind][0],other[point_ind][1]]
             agents[i].id = agents[i].robot_class + i
         self.cf_map = self.orchard_map.copy()
         self.total_apples = np.sum(self.orchard_map == 1) + np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
         self.total_leaves = np.sum(self.orchard_map == 2) + np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
         self.num_trees.append([self.total_apples, self.total_leaves])
-        print(self.num_trees[-1])
+        # print(self.num_trees[-1])
+        # print(self.orchard_map)
 
     def get_surroundings(self, start: list, sight_length: int):
         # Gets the sight_length x sight_length area around the agent
@@ -182,13 +184,13 @@ class OrchardMap():
                 self.picked_apples += 1
             elif agent_type == 2:
                 self.pruned_trees += 1
-            return self.pruned_trees + self.picked_apples
+            return self.pruned_trees + self.picked_apples - self.get_closest_tree(start)/10
         else:
             # if we move we change our previous location back to the original and update our id location
             self.orchard_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
             self.orchard_map[goal[0]][goal[1]] = agent_id
             self.episode_rewards.append(0)
-            return self.pruned_trees + self.picked_apples
+            return self.pruned_trees + self.picked_apples - self.get_closest_tree(goal)/10
         
     def update_cf_map(self, start: list, goal: list, key: str, agent_id: int, agent_type: int) -> None:
 
@@ -203,13 +205,13 @@ class OrchardMap():
             if agent_type == 1:
                 temp = self.pruned_trees+(self.picked_apples+1)
             else:
-                temp = (self.pruned_trees+1)+self.picked_apples
+                temp = (self.pruned_trees+1)+self.picked_apples - self.get_closest_tree(start)/10
             return temp
         else:
             # if we move we change our previous location back to the original and update our id location
             self.cf_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
             self.cf_map[goal[0]][goal[1]] = agent_id
-            return self.pruned_trees + self.picked_apples
+            return self.pruned_trees + self.picked_apples - self.get_closest_tree(goal)/10
         
     def create_checklist(self):
         # creates a checklist containing all of the x,y location of trees to compare at the end of a timestep
@@ -292,6 +294,20 @@ class OrchardMap():
                     tree_state.append(0)
         return tree_state
 
+    def get_closest_tree(self, pose, cf=False):
+        min_dist = 100
+        if cf:
+            for tree in self.checklist:
+                if (0 <  self.cf_map[tree[0]][tree[1]]) and (self.cf_map[tree[0]][tree[1]]<= 4):
+                    a = abs(tree[0] - pose[0]) + abs(tree[1] - pose[1]) 
+                    min_dist = min(a,min_dist)
+        else:
+            for tree in self.checklist:
+                if (0 <  self.orchard_map[tree[0]][tree[1]]) and (self.orchard_map[tree[0]][tree[1]]<= 4):
+                    a = abs(tree[0] - pose[0]) + abs(tree[1] - pose[1]) 
+                    min_dist = min(a,min_dist)
+        return min_dist
+    
     def save_data(self,filepath=None):
         if filepath is None:
             filepath = 'GIVEFILEPATH'
@@ -386,6 +402,8 @@ class OrchardSim():
         # driver
         self.map = orchard_map
         self.agents = agents
+
+        print(agents[0].robot_class)
         self.map.create_map(self.agents)
         self.tsep_max = tstep_max
         self.ep_max = ep_max
@@ -404,7 +422,8 @@ class OrchardSim():
         while True:
             # main control loop for all agents
             # print(self.map.orchard_map)
-            for i in self.agents:
+            for count, i in enumerate(self.agents):
+                c = 2 % (count+1)
                 # get valid moves for agent
                 # print('cur pose', i.cur_pose)
                 valid_moves, valid_keys = self.map.get_valid_moves(i.cur_pose, i.action_type)
@@ -429,7 +448,7 @@ class OrchardSim():
                     else:
                         tree_state = self.map.get_apple_tree_state()
                     # move, key, actions = i.choose_move(points, vals, valid_moves, valid_keys, start_pos)
-                    move, key, actions = i.choose_move_tree(tree_state, valid_moves, valid_keys, start_pos)
+                    move, key, actions = i.choose_move_tree(tree_state, valid_moves, valid_keys, start_pos, self.agents[c].cur_pose)
                     cf_move, cf_key, cf_actions = i.random_move(valid_moves, valid_keys)
                     # print(key)
 
@@ -443,16 +462,14 @@ class OrchardSim():
                     cf_reward = self.map.update_cf_map(i.cur_pose, cf_move, cf_key, i.id, i.action_type)
                     reward = self.map.update_map(i.cur_pose, move, key, i.id, i.action_type)
                     
-                    # if eps % 100 == 0:
-                    #     print(self.map.orchard_map)
-                    #     print(actions)
-                    #     print(reward)
-                    # print(i.cur_pose)
+
                     # if we moved from a spot we need to update the agents internal current position
                     if key != "interact":
                         i.cur_pose = move
                     if cf_key != "interact":
                         i.cur_cf_pose = cf_move
+                    else:
+                        i.cur_cf_pose = i.cur_pose.copy()
                     next_points, next_vals = self.map.get_surroundings(i.cur_pose, 3)
                     # i.apply_sensor(next_points, next_vals,tsteps+1.5)
                     if i.action_type == 2:
@@ -463,12 +480,13 @@ class OrchardSim():
                         tree_state = self.map.get_apple_tree_state()
                         cf_state = self.map.get_apple_tree_state(True)
                         
-                    i.update_next_state(tree_state, i.cur_pose.copy())
-                    i.update_cf_state(cf_state, i.cur_cf_pose.copy())
+                    i.update_next_state(tree_state, i.cur_pose.copy(), self.agents[c].cur_pose)
+                    i.update_cf_state(cf_state, i.cur_cf_pose.copy(),self.agents[c].cur_pose)
                     i.update_buffer(actions, reward, cf_reward)
                     i.policy.train()
                     # if we are at max timestep increment episode and reset
-                    i.update_epsilon()
+                    if tsteps % 20 ==0:
+                        i.update_epsilon()
                     self.map.timestep += 1
                     i.cur_cf_pose = i.cur_pose.copy()
                     self.map.cf_map = self.map.orchard_map.copy()
@@ -486,4 +504,8 @@ class OrchardSim():
                         self.map.reset_map(self.agents)
                         eps += 1
                     # increment timestep
-                    tsteps += 1
+            tsteps += 1
+            if eps % 100 == 0:
+                print(self.map.orchard_map)
+                print(actions)
+                print(reward)
