@@ -62,9 +62,12 @@ class OrchardMap():
         self.original_map = np.copy(self.orchard_map)
         # Spawn the agents at the top center of the map LENGTH NEEDS TO BE LONGER THAN NUMBER OF AGENTS
         start = (len(self.row_description) // 2) - (len(agents) // 2)
-        self.checklist = self.create_checklist()
+        self.checklist, other = self.create_checklist()
+        points = np.random.choice(len(other), len(agents))
         for i in range(len(agents)):
-            self.orchard_map[0][start + i] = agents[i].robot_class
+            point_ind = points[i]
+            print(other[point_ind])
+            self.orchard_map[other[point_ind][0]][other[point_ind][1]] = agents[i].robot_class
             # sets the start pose of agents and the ids
             agents[i].cur_pose = [0, start + i]
             agents[i].id = agents[i].robot_class + i
@@ -211,12 +214,16 @@ class OrchardMap():
     def create_checklist(self):
         # creates a checklist containing all of the x,y location of trees to compare at the end of a timestep
         tree_checklist = []
+        space_checklist = []
         for i in range(np.shape(self.orchard_map)[0]):
             for j in range(len(self.row_description)):
                 if self.orchard_map[i,j] != -20 and self.orchard_map[i,j] != 0:
                     tree_checklist.append([i, j])
+                else:
+                    space_checklist.append([i, j])
         tree_checklist.reverse()
-        return np.array(tree_checklist)
+        space_checklist.reverse()
+        return np.array(tree_checklist), space_checklist
 
     def check_complete(self):
         # Checks if all trees have had their action sequence completed
@@ -354,7 +361,8 @@ class DiscreteOrchardSim():
                     # i.policy.train(points, vals, start_pos, key, reward, next_points, next_vals, i.cur_pose.copy())
                     i.policy.train_apple(appleness, key, reward, next_appleness)
                     # if we are at max timestep increment episode and reset
-                    i.update_epsilon()
+                    if tsteps % 10 == 0:                        
+                        i.update_epsilon()
                     
                     if tsteps >= self.tsep_max or self.map.check_complete():
                         print("EPISODE : " + str(eps) + " COMPLETE")

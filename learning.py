@@ -220,7 +220,7 @@ class Critic(nn.Module):
 class CriticWeird(nn.Module):
     def __init__(self, state_dim, action_dim):
         print('state dim, action dim', state_dim, action_dim)
-        super(Critic, self).__init__()
+        super(CriticWeird, self).__init__()
         self.leaky = nn.LeakyReLU()
         self.l1 = nn.Linear(state_dim, 400)
         torch.nn.init.kaiming_uniform_(self.l1.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
@@ -355,7 +355,7 @@ class SACLimited():
         self.actor = Actor(state_dim, action_dim).to(device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-4)
-        self.critic = Critic(state_dim, action_dim).to(device)
+        self.critic = CriticWeird(state_dim, action_dim).to(device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-4, weight_decay=1e-4)
         self.action_order = ['left','right','up','down','interact']
@@ -433,10 +433,10 @@ class SACLimited():
             cf_state = cf_state.to(device).float()
             
             action_probabilities = self.actor(state)
-            current_Q = self.critic(state,action)
-            current_Q = torch.squeeze(current_Q)
+            current_Q = self.critic(state,action).sum(dim=1)
+            # current_Q = torch.squeeze(current_Q)
             next_actions = self.actor_target(next_state)
-            target_Q = self.critic_target(next_state, next_actions)
+            target_Q = self.critic_target(next_state, next_actions).max(axis=1)[0]
             
             # print(reward, target_Q)
             target_Q = torch.squeeze(target_Q)
