@@ -27,8 +27,7 @@ class OrchardMap():
         self.tree_combos = tree_combos
         # main orchard map and a copy of the original
         self.orchard_map = np.zeros((self.row_height + self.top_buffer + self.bottom_buffer, len(row_description)))
-        print(self.orchard_map.shape)
-        self.checklist = self.create_checklist()
+        self.checklist = None
         self.original_map = None
         self.picked_apples = 0
         self.pruned_trees = 0
@@ -48,6 +47,7 @@ class OrchardMap():
                     self.orchard_map[i][j] = self.row_description[j]
         # Take a copy of the original map (used in update method)
         self.original_map = np.copy(self.orchard_map)
+        self.checklist = self.create_checklist()
         # Spawn the agents at the top center of the map LENGTH NEEDS TO BE LONGER THAN NUMBER OF AGENTS
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         self.checklist = self.create_checklist()
@@ -180,7 +180,7 @@ class OrchardMap():
         tree_checklist = []
         for i in range(np.shape(self.orchard_map)[0]):
             for j in range(len(self.row_description)):
-                if self.orchard_map[i, j] != -20 and self.orchard_map[i, j] != 0:
+                if self.orchard_map[i][j] in self.tree_combos and self.orchard_map[i][j] != -10:
                     tree_checklist.append([i, j])
         tree_checklist.reverse()
         return np.array(tree_checklist)
