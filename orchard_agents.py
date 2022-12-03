@@ -362,7 +362,7 @@ class AgentPruneSAClimited(AgentBase):
     def __init__(self, num_trees, opposite_buffer, shared_buffer) -> None:
         self.id = None
         # Class identifier
-        self.robot_class = 100
+        self.robot_class = 200
         # Class specific action
         self.action_type = 2
         # current position

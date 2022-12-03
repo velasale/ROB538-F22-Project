@@ -8,7 +8,8 @@ class OrchardMap():
 
     def __init__(self, row_height: int, row_description: list, top_buffer: int,
                  bottom_buffer: int, action_sequence: list,
-                 action_map: list, tree_prob: list, tree_combos: list) -> None:
+                 action_map: list, tree_prob: list, tree_combos: list, seed: int) -> None:
+        np.random.seed(seed)
         # how long are the rows
         self.row_height = row_height
         self.row_description = row_description
@@ -166,7 +167,7 @@ class OrchardMap():
                 self.picked_apples += 1
             elif agent_type == 2:
                 self.pruned_trees += 1
-            return 10, tree_finished
+            return (10 + goal[0]), tree_finished
         else:
             # if we move we change our previous location back to the original and update our id location
             self.orchard_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
@@ -195,9 +196,11 @@ class OrchardMap():
         # resets the map back to original state
         print(f'picked {self.picked_apples} apples this episode')
         print(f'pruned {self.pruned_trees} trees this episode')
+        picked = self.picked_apples
+        pruned = self.pruned_trees
         self.orchard_map = np.copy(self.original_map)
 
-        self.rewards.append([self.picked_apples, self.pruned_trees])
+        #self.rewards.append([self.picked_apples, self.pruned_trees])
         self.episode_rewards = []
         self.timestep = 0
         self.picked_apples = 0
@@ -215,6 +218,13 @@ class OrchardMap():
         # agents[0].cur_pose = [start2[0],start2[1]]
         n1 = np.sum(self.orchard_map == 1) + np.sum(self.orchard_map == 3)
         print(n1, 'total apples to pick this time')
+        n2 = np.sum(self.orchard_map == 2) + np.sum(self.orchard_map == 4)
+        print(n2, 'total trees to prune this time')
+        apple_percent = (picked / n1)
+        prune_percent = (pruned / n2)
+        total = ((picked+pruned) / (n1+n2)) * 100
+        print(total, 'Percent complete')
+        self.rewards.append([total, apple_percent, prune_percent])
 
     def get_apple_tree_state(self):
         tree_state = []
@@ -369,10 +379,10 @@ class OrchardSim():
                     # move, key = i.random_move(valid_moves, valid_keys)
                     # update our map with our action choice
                     reward, tree_finished = self.map.update_map(i.cur_pose, move, key, i.id, i.action_type)
-                    if eps % 100 == 0:
-                        print(self.map.orchard_map)
-                        print(actions)
-                        print(reward)
+                    # if eps % 100 == 0:
+                    # print(self.map.orchard_map)
+                    # print(actions)
+                    # print(reward)
                     # print(i.cur_pose)
                     # if we moved from a spot we need to update the agents internal current position
                     if key != "interact":
@@ -388,13 +398,15 @@ class OrchardSim():
                             other_state = self.map.get_prune_tree_state()
                         tree_state = self.map.get_apple_tree_state()
                     i.update_next_state(tree_state, i.cur_pose.copy())
-                    if other_state:
-                        i.update_buffer_shared(actions, reward, other_state)
-                    else:
-                        i.update_buffer(actions, reward)
-                    i.policy.train_shared()
+                    # if other_state:
+                    #    i.update_buffer_shared(actions, reward, other_state)
+                    # else:
+                    i.update_buffer(actions, reward)
+                    # i.policy.train_shared()
+                    i.policy.train()
                     # if we are at max timestep increment episode and reset
-                    i.update_epsilon()
+                    if eps % 10 == 0:
+                        i.update_epsilon()
                     self.map.timestep += 1
                     if tsteps >= self.tsep_max or self.map.check_complete():
                         print("EPISODE : " + str(eps) + " COMPLETE")

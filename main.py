@@ -1,6 +1,7 @@
 import orchard_agents
 # import pygame_render
 import orchard
+import pickle as pkl
 import matplotlib.pyplot as plt
 import numpy as np
 from replaybuffer import ReplayBuffer
@@ -37,7 +38,7 @@ def large_orchard():
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos)
     test = orchard.OrchardSim(
-        orchard_map=large_orchard, agents=agent_list, tstep_max=100, ep_max=5)
+        orchard_map=large_orchard, agents=agent_list, tstep_max=150, ep_max=5)
     # test.run_gui()
     # To run without GUI (Way faster)
     test.run()
@@ -65,17 +66,55 @@ def small_orchard():
     small_orchard = orchard.OrchardMap(
         row_height=10, row_description=small_row8, top_buffer=1, bottom_buffer=1,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
-        tree_combos=default_tree_combos)
-    num_eps = 300
+        tree_combos=default_tree_combos, seed=1253)
+    num_eps = 1000
     test = orchard.OrchardSim(
-        orchard_map=small_orchard, agents=agent_list, tstep_max=70, ep_max=num_eps)
+        orchard_map=small_orchard, agents=agent_list, tstep_max=100, ep_max=num_eps)
     # test.run_gui()
     # To run without GUI (Way faster)
     test.run()
+    fig = plt.figure()
+    average_data = []
+    average_data2 = []
+    average_data3 = []
+    window = 50
+    color = 'blue'
+    color2 = 'orange'
+    color3 = 'red'
+
     num_rewards = np.array(test.map.rewards)
-    plt.plot(range(num_eps), num_rewards[:, 0])
-    plt.plot(range(num_eps), num_rewards[:, 1], alpha=.4)
-    plt.legend(['picked apples', 'pruned trees'])
+    rewards_evolution = num_rewards[:, 0]
+
+    # Step 1: Obtain the moving average window
+    for ind in range(len(rewards_evolution) - window + 1):
+        average_data.append(np.mean(rewards_evolution[ind:ind + window]))
+    label = "Percent of Orchard Complete (MA)"
+
+    # rewards_evolution2 = num_rewards[:, 1]
+    # for ind in range(len(rewards_evolution2) - window + 1):
+    #     average_data2.append(np.mean(rewards_evolution2[ind:ind + window]))
+    # label = "Percent of Apples Picked (MA)"
+
+    # rewards_evolution3 = num_rewards[:, 2]
+    # for ind in range(len(rewards_evolution3) - window + 1):
+    #     average_data3.append(np.mean(rewards_evolution3[ind:ind + window]))
+    # label = "Percent of Trees Pruned (MA)"
+    save_dict = {"total": num_rewards[:, 0], "pick": num_rewards[:, 1], "prune": num_rewards[:, 2]}
+    with open("rollback_1_reward_2053.pkl", "wb+") as file:
+        pkl.dump(save_dict, file)
+    # Step 2: Plot results
+    plt.plot(average_data, color=color, label=label)
+    #plt.plot(average_data2, color=color2, label=label)
+    #plt.plot(average_data3, color=color3, label=label)
+    # alpha sets the transparency of the original data
+    plt.plot(rewards_evolution, color=color, alpha=0.2, label='Total Percent')
+    #plt.plot(rewards_evolution2, color=color2, alpha=0.2, label='Pick Percent')
+    #plt.plot(rewards_evolution3, color=color3, alpha=0.2, label='Prune Percent')
+    plt.xlabel("Episodes")
+    plt.ylabel("Percent Complete")
+    plt.legend()
+    plt.title("Rollback Buffer Reward: Rollback = 1, Rollback Decay: .5")
+
     plt.show()
     plt.clf()
     plt.plot(range(len(test.map.rewards[0])), test.map.rewards[0])

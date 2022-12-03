@@ -408,7 +408,7 @@ class SACLimited():
     def update_buffer(self, state, action, reward, next_state):
         if reward > 0:
             self.replay_buffer.update_buffer_rollback_reward(
-                self.enum, rollback=1, rollback_reward=reward, rollback_decay=0.5)
+                self.enum, rollback=2, rollback_reward=reward, rollback_decay=0.5)
         self.replay_buffer.update_buffer(
             self.enum, self.tnum, state, action, reward, next_state)
         self.tnum += 1
@@ -436,19 +436,19 @@ class SACLimited():
     def train(self):
         if len(self.replay_buffer) > self.batch_size:
             sample = self.replay_buffer.sample(self.batch_size)
-            state = []
-            action = []
-            reward = []
-            next_state = []
+            state = [d['state'] for d in sample]
+            action = [d['action'] for d in sample]
+            reward = [d['reward'] for d in sample]
+            next_state = [d['next_state'] for d in sample]
 
-            for timestep in sample:
-                state.append(timestep['state'])
-                # print('timestep state')
-                # print(timestep['state'])
-                action.append(timestep['action'])
-                # print(type(timestep['action']))
-                reward.append(timestep['reward'])
-                next_state.append(timestep['next_state'])
+            # for timestep in sample:
+            #     state.append(timestep['state'])
+            #     # print('timestep state')
+            #     # print(timestep['state'])
+            #     action.append(timestep['action'])
+            #     # print(type(timestep['action']))
+            #     reward.append(timestep['reward'])
+            #     next_state.append(timestep['next_state'])
 
             state = torch.tensor(state)
             state = torch.flatten(state, start_dim=1)
