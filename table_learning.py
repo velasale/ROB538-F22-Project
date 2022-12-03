@@ -61,7 +61,7 @@ def random_learning(agents, map):
 def local_rewards(agents, map):
     """
     Assumes that agents' actions are independent.
-    Each agent has its own Q-learning Temporal Difference
+    Each agent has its own Q-learning Temporal Difference table
     :param agents:
     :param map:
     :param steps:
@@ -84,6 +84,8 @@ def local_rewards(agents, map):
 
             # b. Observe reward
             reward = map.reward_map[move[0]][move[1]]
+            if i.reward == -1:
+                i.ineffective_steps += 1
 
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(move, i.action_type, i.id)
@@ -98,6 +100,8 @@ def local_rewards(agents, map):
             # if we moved from a spot we need to update the agents internal current position
             if key != "interact":
                 i.cur_pose = move
+            else:
+                i.interactions += 1
 
             # Update epsilon
             i.update_epsilon()
@@ -140,19 +144,25 @@ def global_rewards(agents, map):
             # b. Observe reward
             i.reward = map.reward_map[i.move[0]][i.move[1]]
 
+            if i.reward == -1:
+                i.ineffective_steps = 1
+
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(i.move, i.action_type, i.id)
             i.move_2, key_2 = i.choose_move(points, vals, valid_moves_prime, valid_keys_prime)
 
-    global_reward = 0
+    # Global Reward
+    global_interactions = 0
+    global_ineffective_steps = 0
     for i in agents:
-        # global_reward += i.accumulated_reward
-        global_reward += i.reward
+        global_interactions += i.interactions
+        global_ineffective_steps += i.ineffective_steps
+    global_reward = 100 * global_interactions - global_ineffective_steps
 
     for i in agents:
         # --- Step 3: Update Q_sa_values of the agent
         i.update_value(i.move, i.move_2, global_reward)
-        i.accumulated_reward = i.accumulated_reward + i.reward
+        i.accumulated_reward = i.accumulated_reward + global_reward
         # i.accumulated_reward = i.accumulated_reward + global_reward
 
         # update our map with our action choice
@@ -160,6 +170,8 @@ def global_rewards(agents, map):
         # if we moved from a spot we need to update the agents internal current position
         if i.key != "interact":
             i.cur_pose = i.move
+        else:
+            i.interactions += 1
 
         # Update epsilon
         i.update_epsilon()
@@ -173,6 +185,11 @@ def global_rewards(agents, map):
 
 def diff_rewards(agents, map):
     """
+    Assumes that agents' actions are independent, hence each agent has its own Q-learning Temporal Difference
+    The system/global reward is kept based on the sum of the rewards from all agents.
+
+
+
     Temporal Difference - Global Rewards
     :param agents:
     :param map:
@@ -197,32 +214,46 @@ def diff_rewards(agents, map):
             # b. Observe reward
             i.reward = map.reward_map[i.move[0]][i.move[1]]
 
+            if i.reward == -1:
+                i.ineffective_steps += 1
+
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(i.move, i.action_type, i.id)
             i.move_2, key_2 = i.choose_move(points, vals, valid_moves_prime, valid_keys_prime)
 
-    global_reward = 0
+    # Global Reward
+    global_interactions = 0
+    global_ineffective_steps = 0
     for i in agents:
-        global_reward += i.reward
+        global_interactions += i.interactions
+        global_ineffective_steps += i.ineffective_steps
+    global_reward = 100 * global_interactions / global_ineffective_steps
 
     for i in agents:
-        # Obtain the Counterfactual reward
-        others_reward = 0
+        # Obtain the counterfactual reward
+        others_interactions = 0
+        others_ineffective_steps = 0
         for j in agents:
             if j != i:
-                others_reward = others_reward + j.reward
+                others_interactions += j.interactions
+                others_ineffective_steps += j.ineffective_steps
+
+        others_reward = 100 * others_interactions / others_ineffective_steps
 
         diff_reward = global_reward - others_reward
 
         # --- Step 3: Update Q_sa_values of the agent
         i.update_value(i.move, i.move_2, diff_reward)
         i.accumulated_reward = i.accumulated_reward + diff_reward
+        # i.accumulated_reward = i.accumulated_reward + global_reward
 
         # update our map with our action choice
         map.update_map(i.cur_pose, i.move, i.key, i.id)
         # if we moved from a spot we need to update the agents internal current position
         if i.key != "interact":
             i.cur_pose = i.move
+        else:
+            i.interactions += 1
 
         # Update epsilon
         i.update_epsilon()
@@ -278,7 +309,10 @@ def dpp_rewards(agents, map):
                     j.valid_moves, j.valid_keys = map.get_valid_moves(i.cur_pose, j.action_type, j.id)
 
                     if "interact" in j.valid_keys:
-                        total_rewards += 5
+                        total_rewards += 10
+
+            if i.reward == -1:
+                i.ineffective_steps += 1
 
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(i.move, i.action_type, i.id)
@@ -294,6 +328,8 @@ def dpp_rewards(agents, map):
             # if we moved from a spot we need to update the agents internal current position
             if i.key != "interact":
                 i.cur_pose = i.move
+            else:
+                i.interactions += 1
 
             # Update epsilon
             i.update_epsilon()

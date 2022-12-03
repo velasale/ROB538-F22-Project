@@ -87,7 +87,7 @@ class PygameRender():
             # self.agents, self.map = tl.global_rewards(self.agents, self.map)
             # self.agents, self.map = tl.diff_rewards(self.agents, self.map)
 
-            if eps >=10:
+            if eps >=200:
                 # 30fps
                 clock.tick(30)
 

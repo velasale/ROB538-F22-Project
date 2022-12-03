@@ -237,7 +237,9 @@ class OrchardSim():
                     break
 
             # Save rewards and reset
+            # print("\nEpisode: ", str(episode))
             for i in self.agents:
+                # print(i.interactions, i.ineffective_steps)
                 i.reward_evolution.append(i.accumulated_reward)
                 i.reset_agent()
             self.map.reset_map(self.agents)
