@@ -118,7 +118,7 @@ class OrchardMap():
         tree_checklist = []
         for i in range(np.shape(self.orchard_map)[0]):
             for j in range(len(self.row_description)):
-                if self.orchard_map[i][j] in self.tree_combos and self.orchard_map[i][j] != -10:
+                if self.orchard_map[i][j] in self.tree_combos:
                     tree_checklist.append([i, j])
         tree_checklist.reverse()
         return np.array(tree_checklist)
