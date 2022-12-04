@@ -70,19 +70,27 @@ class PygameRender():
                 if event.type == pygame.QUIT:  # If user clicked close
                     done = True  # Flag that we are done so we exit this loop
 
+            # --- Keep track of the two previous poses
             for i in agents:
                 i.previous_previous_pose = i.previous_pose
                 i.previous_pose = i.cur_pose
 
-            # Learn
-            # if self.approach == "dpp":
-            agents, self.map = tl.diff_rewards(agents, self.map)
-            # Learn
-            # agents, self.map = tl.local_rewards(agents, self.map)
-            # self.agents, self.map = tl.global_rewards(self.agents, self.map)
-            # self.agents, self.map = tl.diff_rewards(self.agents, self.map)
+            # --- Learn: Depending on the approach ---
+            if self.approach == "random":
+                agents, self.map = tl.random_learning(agents, self.map)
+            elif self.approach == "local":
+                agents, self.map = tl.local_rewards(agents, self.map)
+            elif self.approach == "global":
+                agents, self.map = tl.global_rewards(agents, self.map)
+            elif self.approach == "diff":
+                agents, self.map = tl.diff_rewards(agents, self.map)
+            elif self.approach == "follow":
+                agents, self.map = tl.followme_rewards(agents, self.map)
+            elif self.approach == "dpp":
+                agents, self.map = tl.dpp_rewards(agents, self.map)
 
-            if eps >= 200:
+            # Simply select from which episode do you want to see the animation
+            if eps >= 100:
                 # 30fps
                 clock.tick(30)
 
