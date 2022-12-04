@@ -19,7 +19,7 @@ class AgentBase():
         self.q_sa_table = np.zeros((rows, cols))
         self.learning_rate = 0.05
         self.epsilon = 1.0
-        self.epsilon_updater = 0.99
+        self.epsilon_updater = 0.9
         self.gamma = 0.9
         self.accumulated_reward = 0
         self.reward_evolution = []
@@ -94,30 +94,26 @@ class AgentBase():
 
         return action
 
-    def update_value(self, move: list, move_2: list, reward: int):
+    def qlearning_update_value(self, state: list, s_prime: list, reward: int):
         """
-        Updates Qtable using Q_algorithm, which is TD using the max value of the state of the next action
-        :param move:    Next state's value
-        :param move_2:  Value of the state given that the best action is taken
-        :param reward:
+        Updates Qtable using Qlearning algorithm, which is TD using the max value of the state of the next action
+        :param state:           Next state (S)
+        :param s_prime:     State prime (S'), after taking the best action
+        :param reward:           Reward (R) of state (S)
         :return:
         """
-
         # --- Q learning algorithm ---
-        # Q(s,a) <-- Q(s,a) + alpha * [(reward + gamma * max Q(s',a') - Q(s,a)]
-        current_value = self.q_sa_table[move[0]][move[1]]       # Q(s,a)
-        prime_value = self.q_sa_table[move_2[0]][move_2[1]]     # Q(s',a')
-        TD = reward + self.gamma * prime_value - current_value
-        next_value = current_value + self.learning_rate * TD
+        # Q(S,A) <-- Q(S,A) + alpha * [R + gamma * max Q(S',a) - Q(S,A)]
+        current_value = self.q_sa_table[state[0]][state[1]]  # current Q(S,A)
+        prime_value = self.q_sa_table[s_prime[0]][s_prime[1]]  # maxQ(S',a)
+        next_value = current_value + self.learning_rate * (reward + self.gamma * prime_value - current_value)
 
         # Update value in Q_sa_table
-        self.q_sa_table[move[0]][move[1]] = next_value
+        self.q_sa_table[state[0]][state[1]] = next_value  # update Q(S,A)
 
-    def choose_move(self, observed_points, observed_vals, valid_moves, valid_keys):
-        # TODO: Fill out for classes RL stuff
-        # randomly chooses a valid move
-        # points is a list of the observed points, observed vals is a list of corresponding id of each x,y
-        # returns the [x,y] of next move and the key: up, down, left, right or interact
+    def choose_move_egreedy(self, observed_points, observed_vals, valid_moves, valid_keys):
+        """ Chooses next move from a list (valid_moves) following an epsilon greedy policy
+        """
 
         # --- Step 0: Map valid moves to values from Q_sa_table
         values = []
@@ -129,6 +125,23 @@ class AgentBase():
 
         # --- Step 1: Implement e-greedy to select the next move
         choice = self.epsilon_greedy(values, self.epsilon)
+
+        return valid_moves[choice], valid_keys[choice]
+
+    def choose_move_max(self, observed_points, observed_vals, valid_moves, valid_keys):
+        """Chooses next move from a list (valid_moves) picking the max value.
+        This is required for Qlearning"""
+
+        # --- Step 0: Map valid moves to values from Q_sa_table
+        values = []
+        for i in range(len(valid_moves)):
+            see = valid_moves[i]
+            see_row = see[0]
+            see_col = see[1]
+            values.append(self.q_sa_table[see_row][see_col])
+
+        # --- Step 1: Simply choose max to select the next move
+        choice = np.argmax(values)
 
         return valid_moves[choice], valid_keys[choice]
 

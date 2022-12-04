@@ -29,17 +29,17 @@ def random_learning(agents, map):
 
             # --- Step 1: Take next action ---
             # a - Observe next state
-            move, key = i.choose_move(points, vals, valid_moves, valid_keys)
+            move, key = i.choose_move_egreedy(points, vals, valid_moves, valid_keys)
 
             # b. Observe reward
             reward = map.reward_map[move[0]][move[1]]
 
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(move, i.action_type, i.id)
-            move_2, key_2 = i.choose_move(points, vals, valid_moves_prime, valid_keys_prime)
+            move_2, key_2 = i.choose_move_egreedy(points, vals, valid_moves_prime, valid_keys_prime)
 
             # --- Step 3: Update Q_sa_values of the agent
-            i.update_value(move, move_2, reward)
+            i.qlearning_update_value(move, move_2, reward)
             i.accumulated_reward = i.accumulated_reward + reward
 
             # update our map with our action choice
@@ -78,7 +78,7 @@ def local_rewards(agents, map):
             points, vals = map.get_surroundings(i.cur_pose, 1)
             # print("Valid moves and valid keys are: ", valid_moves, valid_keys)
 
-            # # Avoid going two steps back
+            # Avoid going two steps back (I noticed in the simulation agents get stuck between two states)
             for n, o in zip(valid_moves, valid_keys):
                 if n == i.previous_previous_pose and len(valid_moves) > 1:
                     valid_moves.remove(n)
@@ -86,10 +86,12 @@ def local_rewards(agents, map):
                     # pass
                     break
 
-            # --- Step 1: Take next action ---
-            # a - Observe next state
-            move, key = i.choose_move(points, vals, valid_moves, valid_keys)
+            # ---- Qlearning (off-policy TD control) implementation -----
+            # From Sutton & Barto. Reinforcement Learning: An introduction. page 131
 
+            # --- Step 1: Take next action
+            # a - Choose Action
+            move, key = i.choose_move_egreedy(points, vals, valid_moves, valid_keys)
             # b. Observe reward
             reward = map.reward_map[move[0]][move[1]]
             if i.reward == -1:
@@ -97,10 +99,11 @@ def local_rewards(agents, map):
 
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(move, i.action_type, i.id)
-            move_2, key_2 = i.choose_move(points, vals, valid_moves_prime, valid_keys_prime)
+            move_2, key_2 = i.choose_move_max(points, vals, valid_moves_prime, valid_keys_prime)
 
-            # --- Step 3: Update Q_sa_values of the agent
-            i.update_value(move, move_2, reward)
+            # --- Step 3: Update Q_sa_values of the agent using Qlearning
+            i.qlearning_update_value(move, move_2, reward)
+
             i.accumulated_reward = i.accumulated_reward + reward
 
             # update our map with our action choice
@@ -155,7 +158,7 @@ def global_rewards(agents, map):
 
             # --- Step 1: Take next action ---
             # a - Observe next state
-            i.move, i.key = i.choose_move(points, vals, valid_moves, valid_keys)
+            i.move, i.key = i.choose_move_egreedy(points, vals, valid_moves, valid_keys)
 
             # b. Observe reward
             i.reward = map.reward_map[i.move[0]][i.move[1]]
@@ -165,7 +168,7 @@ def global_rewards(agents, map):
 
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(i.move, i.action_type, i.id)
-            i.move_2, key_2 = i.choose_move(points, vals, valid_moves_prime, valid_keys_prime)
+            i.move_2, key_2 = i.choose_move_max(points, vals, valid_moves_prime, valid_keys_prime)
 
     # Global Reward
     global_interactions = 0
@@ -179,7 +182,7 @@ def global_rewards(agents, map):
     for i in agents:
         # --- Step 3: Update Q_sa_values of the agent
         reward = i.reward + global_reward
-        i.update_value(i.move, i.move_2, reward)
+        i.qlearning_update_value(i.move, i.move_2, reward)
         i.accumulated_reward = i.accumulated_reward + reward
         # i.accumulated_reward = i.accumulated_reward + global_reward
 
@@ -233,7 +236,7 @@ def diff_rewards(agents, map):
 
             # --- Step 1: Take next action ---
             # a - Observe next state
-            i.move, i.key = i.choose_move(points, vals, valid_moves, valid_keys)
+            i.move, i.key = i.choose_move_egreedy(points, vals, valid_moves, valid_keys)
 
             # b. Observe reward
             i.reward = map.reward_map[i.move[0]][i.move[1]]
@@ -243,7 +246,7 @@ def diff_rewards(agents, map):
 
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(i.move, i.action_type, i.id)
-            i.move_2, key_2 = i.choose_move(points, vals, valid_moves_prime, valid_keys_prime)
+            i.move_2, key_2 = i.choose_move_max(points, vals, valid_moves_prime, valid_keys_prime)
 
     # Global Reward
     global_interactions = 0
@@ -267,7 +270,7 @@ def diff_rewards(agents, map):
         diff_reward = global_reward - others_reward
 
         # --- Step 3: Update Q_sa_values of the agent
-        i.update_value(i.move, i.move_2, diff_reward)
+        i.qlearning_update_value(i.move, i.move_2, diff_reward)
         i.accumulated_reward = i.accumulated_reward + diff_reward
         # i.accumulated_reward = i.accumulated_reward + global_reward
 
@@ -317,7 +320,7 @@ def dpp_rewards(agents, map):
 
             # --- Step 1: Take next action ---
             # a - Observe next state
-            i.move, i.key = i.choose_move(i.points, i.vals, i.valid_moves, i.valid_keys)
+            i.move, i.key = i.choose_move_egreedy(i.points, i.vals, i.valid_moves, i.valid_keys)
 
     for i in agents:
 
@@ -340,10 +343,10 @@ def dpp_rewards(agents, map):
 
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(i.move, i.action_type, i.id)
-            move_2, key_2 = i.choose_move(i.points, i.vals, valid_moves_prime, valid_keys_prime)
+            move_2, key_2 = i.choose_move_egreedy(i.points, i.vals, valid_moves_prime, valid_keys_prime)
 
             # --- Step 3: Update Q_sa_values of the agent
-            i.update_value(i.move, move_2, total_rewards)
+            i.qlearning_update_value(i.move, move_2, total_rewards)
             i.accumulated_reward += i.reward
             # i.accumulated_reward += total_rewards
 
@@ -387,7 +390,7 @@ def followme_rewards(agents, map):
 
             # --- Step 1: Take next action ---
             # a - Observe next state
-            move, key = i.choose_move(points, vals, valid_moves, valid_keys)
+            move, key = i.choose_move_egreedy(points, vals, valid_moves, valid_keys)
 
             # b. Observe reward
             reward = map.reward_map[move[0]][move[1]]
@@ -400,10 +403,10 @@ def followme_rewards(agents, map):
 
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(move, i.action_type, i.id)
-            move_2, key_2 = i.choose_move(points, vals, valid_moves_prime, valid_keys_prime)
+            move_2, key_2 = i.choose_move_egreedy(points, vals, valid_moves_prime, valid_keys_prime)
 
             # --- Step 3: Update Q_sa_values of the agent
-            i.update_value(move, move_2, reward)
+            i.qlearning_update_value(move, move_2, reward)
             i.accumulated_reward = i.accumulated_reward + reward
 
             # update our map with our action choice
