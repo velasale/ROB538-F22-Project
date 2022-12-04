@@ -205,8 +205,8 @@ class OrchardSim():
     def run_gui(self, approach):
         # runs gui
         self.render = pygame_render.PygameRender(self.map)
-        self.render.start(self.agents, self.ep_max, self.tsep_max)
         self.render.approach = approach
+        self.render.start(self.agents, self.ep_max, self.tsep_max)
 
     def run(self, approach:str):
 
@@ -220,11 +220,12 @@ class OrchardSim():
 
             for steps in range(tsteps):
 
+                # --- Keep track of the two previous poses
                 for i in self.agents:
                     i.previous_previous_pose = i.previous_pose
                     i.previous_pose = i.cur_pose
 
-                # --- Learn: Choose (uncomment) the approach ---
+                # --- Learn: Depending on the approach ---
                 if approach == "random":
                     self.agents, self.map = tl.random_learning(self.agents, self.map)
                 elif approach == "local":
