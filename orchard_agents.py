@@ -69,9 +69,9 @@ class AgentBase():
 
     def epsilon_greedy(self, values: list, epsilon: float):
         """
-        Policy
-        :param Q: List with all the states being as rows, and all columns being possible actions
-        :param state: State at which we would like to explore next action
+        Epsilon greedy policy. It allows exploration depending on the value of epsilon, otherwise
+        it exploits by choosing the max value
+        :param values: List of Qtable values to choose from
         :param epsilon: Parameter to balance exploration and exploitation
         :return:
         """
@@ -79,12 +79,7 @@ class AgentBase():
         # Generate a random number from 0 to 1
         p = random.random()
         choices = len(values)
-        # print(choices)
-        # if choices == 0:
-        #     # If there are not choices to move, remain in the same place
-        #     action = self.cur_pos
-        #
-        # else:
+
         if p < epsilon:
             # Encourage the agent to Explore!
             action = random.randrange(0, choices)  # outputs random from 0,1,2 or 3
