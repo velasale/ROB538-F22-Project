@@ -28,9 +28,9 @@ default_tree_combos = [1, 2, 3, -10]
 
 # Design A:
 # tstep = 500, episodes = 5000, epsilon = 0.99
-small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
+# small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
 
-# small_row8 = large_row32
+small_row8 = large_row32
 
 # small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, -20, -10, -10, -20, 0, 0]
 
@@ -60,13 +60,13 @@ def small_orchard(approach: str):
     # 8x13
 
     # Grid parameters
-    top_buffer = 3
-    bottom_buffer = 3
-    row_height = 1
+    top_buffer = 2
+    bottom_buffer = 2
+    row_height = 4
 
     # Algorithm parameters
     time_steps = 1000
-    episodes = 2000
+    episodes = 1000
 
     # Create Orchard
     small_orchard = orchard.OrchardMap(
@@ -79,17 +79,17 @@ def small_orchard(approach: str):
     cols = len(small_row8)
     agent_list = []
 
-    for i in range(1):
+    for i in range(4):
         a = orchard_agents.AgentPick(rows, cols)
         agent_list.append(a)
-    for i in range(1):
+    for i in range(4):
         a = orchard_agents.AgentPrune(rows, cols)
         agent_list.append(a)
 
     test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=time_steps, ep_max=episodes)
-    # test.run_gui(approach)
+    test.run_gui(approach)
     # To run without GUI (Way faster)
-    test.run(approach)
+    # test.run(approach)
 
     return test
 

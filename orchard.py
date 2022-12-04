@@ -30,6 +30,7 @@ class OrchardMap():
         self.tree_combos = tree_combos
         # main orchard map and a copy of the original
         self.orchard_map = np.zeros((self.row_height + self.top_buffer + self.bottom_buffer, len(row_description)))
+        self.orchard_map = self.orchard_map.astype(int)
         self.checklist = None
         self.original_map = None
 
@@ -53,7 +54,6 @@ class OrchardMap():
 
                     if self.orchard_map[i][j] == 3:
                         self.reward_map[i][j] = 10
-
 
     def create_map(self, agents: list = None) -> None:
         # Change every row except for buffer rows to the row_description
@@ -137,7 +137,7 @@ class OrchardMap():
         # returns list of x,y for all valid moves and a list of valid action keys: up, down, left, right, interact
 
         if len(valid_moves) == 0:
-            # Simply do nothin and remain in the samen position
+            # Simply do nothing and remain in the same position
             valid_moves.append(start)
             valid_keys.append("stay")
             # print("watch out")
@@ -219,6 +219,11 @@ class OrchardSim():
             self.map.create_reward_map()
 
             for steps in range(tsteps):
+
+                for i in self.agents:
+                    i.previous_previous_pose = i.previous_pose
+                    i.previous_pose = i.cur_pose
+
                 # --- Learn: Choose (uncomment) the approach ---
                 if approach == "random":
                     self.agents, self.map = tl.random_learning(self.agents, self.map)

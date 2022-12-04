@@ -19,7 +19,7 @@ class AgentBase():
         self.q_sa_table = np.zeros((rows, cols))
         self.learning_rate = 0.05
         self.epsilon = 1.0
-        self.epsilon_updater = 0.999
+        self.epsilon_updater = 0.99
         self.gamma = 0.9
         self.accumulated_reward = 0
         self.reward_evolution = []
@@ -33,6 +33,7 @@ class AgentBase():
         self.valid_keys = []
         self.previous_pose_step = 0
         self.previous_pose = []
+        self.previous_previous_pose = []
         self.interactions = 0
         self.ineffective_steps = 1
 
@@ -40,7 +41,7 @@ class AgentBase():
         self.epsilon = 1
         self.accumulated_reward = 0
         self.interactions = 0
-        self.ineffective_steps = 1
+        self.ineffective_steps = 0
 
     def random_move(self, valid_moves, valid_keys):
         # randomly chooses a valid move, takes in a list of valid x,y moves and the corresponding valid keys

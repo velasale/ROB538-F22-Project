@@ -64,30 +64,25 @@ class PygameRender():
         clock = pygame.time.Clock()
         # loops forever until exit
 
-        previous_step = 0
-        for i in agents:
-            i.previous_pose = i.cur_pose
-
         while not done:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:  # If user clicked close
                     done = True  # Flag that we are done so we exit this loop
 
-            if tsteps - previous_step == 2:
-                previous_step = tsteps
-                for i in agents:
-                    i.previous_pose = i.cur_pose
+            for i in agents:
+                i.previous_previous_pose = i.previous_pose
+                i.previous_pose = i.cur_pose
 
             # Learn
             # if self.approach == "dpp":
-            agents, self.map = tl.dpp_rewards(agents, self.map)
+            agents, self.map = tl.diff_rewards(agents, self.map)
             # Learn
             # agents, self.map = tl.local_rewards(agents, self.map)
             # self.agents, self.map = tl.global_rewards(self.agents, self.map)
             # self.agents, self.map = tl.diff_rewards(self.agents, self.map)
 
-            if eps >=200:
+            if eps >= 200:
                 # 30fps
                 clock.tick(30)
 

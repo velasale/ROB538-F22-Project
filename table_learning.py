@@ -78,6 +78,14 @@ def local_rewards(agents, map):
             points, vals = map.get_surroundings(i.cur_pose, 1)
             # print("Valid moves and valid keys are: ", valid_moves, valid_keys)
 
+            # # Avoid going two steps back
+            for n, o in zip(valid_moves, valid_keys):
+                if n == i.previous_previous_pose and len(valid_moves) > 1:
+                    valid_moves.remove(n)
+                    valid_keys.remove(o)
+                    # pass
+                    break
+
             # --- Step 1: Take next action ---
             # a - Observe next state
             move, key = i.choose_move(points, vals, valid_moves, valid_keys)
@@ -137,6 +145,14 @@ def global_rewards(agents, map):
             points, vals = map.get_surroundings(i.cur_pose, 3)
             # print("Valid moves and valid keys are: ", valid_moves, valid_keys)
 
+            # # Avoid going two steps back
+            for n, o in zip(valid_moves, valid_keys):
+                if n == i.previous_previous_pose and len(valid_moves) > 1:
+                    valid_moves.remove(n)
+                    valid_keys.remove(o)
+                    # pass
+                    break
+
             # --- Step 1: Take next action ---
             # a - Observe next state
             i.move, i.key = i.choose_move(points, vals, valid_moves, valid_keys)
@@ -157,12 +173,14 @@ def global_rewards(agents, map):
     for i in agents:
         global_interactions += i.interactions
         global_ineffective_steps += i.ineffective_steps
-    global_reward = 100 * global_interactions - global_ineffective_steps
+    # global_reward = 1 * global_interactions - global_ineffective_steps
+    global_reward = 1 * global_interactions
 
     for i in agents:
         # --- Step 3: Update Q_sa_values of the agent
-        i.update_value(i.move, i.move_2, global_reward)
-        i.accumulated_reward = i.accumulated_reward + global_reward
+        reward = i.reward + global_reward
+        i.update_value(i.move, i.move_2, reward)
+        i.accumulated_reward = i.accumulated_reward + reward
         # i.accumulated_reward = i.accumulated_reward + global_reward
 
         # update our map with our action choice
@@ -188,8 +206,6 @@ def diff_rewards(agents, map):
     Assumes that agents' actions are independent, hence each agent has its own Q-learning Temporal Difference
     The system/global reward is kept based on the sum of the rewards from all agents.
 
-
-
     Temporal Difference - Global Rewards
     :param agents:
     :param map:
@@ -206,6 +222,14 @@ def diff_rewards(agents, map):
             # get the surrounding area with sensors
             points, vals = map.get_surroundings(i.cur_pose, 3)
             # print("Valid moves and valid keys are: ", valid_moves, valid_keys)
+
+            # # Avoid going two steps back
+            for n, o in zip(valid_moves, valid_keys):
+                if n == i.previous_previous_pose and len(valid_moves) > 1:
+                    valid_moves.remove(n)
+                    valid_keys.remove(o)
+                    # pass
+                    break
 
             # --- Step 1: Take next action ---
             # a - Observe next state
@@ -227,7 +251,7 @@ def diff_rewards(agents, map):
     for i in agents:
         global_interactions += i.interactions
         global_ineffective_steps += i.ineffective_steps
-    global_reward = 100 * global_interactions / global_ineffective_steps
+    global_reward = 10 * global_interactions / global_ineffective_steps
 
     for i in agents:
         # Obtain the counterfactual reward
@@ -238,7 +262,7 @@ def diff_rewards(agents, map):
                 others_interactions += j.interactions
                 others_ineffective_steps += j.ineffective_steps
 
-        others_reward = 100 * others_interactions / others_ineffective_steps
+        others_reward = 10 * others_interactions / others_ineffective_steps
 
         diff_reward = global_reward - others_reward
 
@@ -459,9 +483,6 @@ def plot_reward_and_baseline(rewards_evolution_1: list, rewards_evolution_2, i):
     plt.ylabel("Reward")
     plt.legend()
     plt.title(i)
-
-
-
 
 
 def plot_values(values: list, i):
