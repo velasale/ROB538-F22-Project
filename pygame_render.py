@@ -68,43 +68,20 @@ class PygameRender():
             for i in agents:
                 # get valid moves for agent
                 valid_moves, valid_keys, invalid_moves = self.map.get_valid_moves(i.cur_pose, i.action_type)
-                # print(self.map.orchard_map)
-                # if we have a valid move continue
-                # print(valid_keys)
                 if len(valid_keys) > 0:
-                    # get the surrounding area with sensors
-                    #points, vals = self.map.get_surroundings(i.cur_pose, 10)
-                    # i.apply_sensor(points,vals,tsteps+1)
-                    # if internal channel is set we want to communicate
-                    # if i.comms_channel != None:
-                    # finds the agent we want to communicate with
-                    #    for j in self.agents:
-                    #        if j.id == j.comms_channel:
-                    # gets map from other agent
-                    #            i.recieve_communication(j.send_communication())
-                    # Agent chooses move doesnt do anything yet
+                    # get agent position
                     start_pos = i.cur_pose.copy()
+                    # get state for the given agent
                     if i.action_type == 2:
                         tree_state, count = self.map.get_prune_tree_state()
                     else:
                         tree_state, count = self.map.get_apple_tree_state()
-                    # move, key, actions = i.choose_move(points, vals, valid_moves, valid_keys, start_pos)
+                    # Choose a move
                     move, key, same_location = i.choose_move_tree_path(
                         tree_state, self.map.action_areas, valid_moves, valid_keys, start_pos, invalid_moves, count)
-                    if i.action_type == 1:
-                        print("CURRENT GOAL: ", i.goal_position)
-                        print("CURRENT MOVE: ", move)
-                        print("CURRENT MOVE KEY: ", key)
-                        print("CURRENT PATH LIST: ", i.path_list)
-#                    if i.action_type == 2:
-                    #     print(i.goal_position)
-                    #     print(i.goal_distance)
-                    # # print(key)
+                    # If we did not move anywhere and stayed in the same location we give a large negative reward
                     if same_location:
-                        reward = (-3-(i.goal_distance))
-                        if i.action_type == 1:
-                            print(reward)
-                            print("")
+                        reward = -50
                         other_state = None
                         if i.action_type == 2:
                             if reward > 0 and tree_finished == False:
@@ -114,35 +91,28 @@ class PygameRender():
                             if reward > 0 and tree_finished == False:
                                 other_state = self.map.get_prune_tree_state()
                             tree_state, count = self.map.get_apple_tree_state()
-                    # if other_state:
-                    #    i.update_buffer_shared(actions, reward, other_state)
-                    # else:
                         i.update_next_state_path(tree_state, count)
                         i.update_buffer(reward)
-                        # i.policy.train_shared()
                         i.policy.train()
-
+                        if eps % 10 == 0:
+                            i.update_epsilon()
+                    # If we had a valid move
                     if move:
-                       # REMOVE RANDOM MOVE ONCE CHOOSE MOVE IMPLEMENTED ONLY FOR DEMO
-                        # move, key = i.random_move(valid_moves, valid_keys)
-                        # update our map with our action choice
-                        reward, tree_finished = self.map.update_map(
-                            i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance)
-                        # if i.action_type == 2:
-                        #     print(i.cur_pose)
-                        # # # if eps % 100 == 0:
-                        # print(self.map.orchard_map)
-                        # print(actions)
-                        # print(reward)
-                        # print(i.cur_pose)
-                        # if we moved from a spot we need to update the agents internal current position
+                        # update the map and get our reward
+                        # CHANGE REWARD SCHEME HERE
+                        # reward, tree_finished = self.map.update_map_local(
+                        #     i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
+                        reward, tree_finished = self.map.update_map_diff(
+                            i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
+                        # reward, tree_finished = self.map.update_map_global(
+                        #     i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
+
+                        # if we interacted dont update pose
                         if key != "interact":
                             i.cur_pose = move
-                        # i.apply_sensor(next_points, next_vals,tsteps+1.5)
+                        # if we recieved a reward
                         if reward:
-                            if i.action_type == 1:
-                                print(reward)
-                                print("")
+                            # get updated states
                             other_state = None
                             if i.action_type == 2:
                                 if reward > 0 and tree_finished == False:
@@ -152,29 +122,24 @@ class PygameRender():
                                 if reward > 0 and tree_finished == False:
                                     other_state = self.map.get_prune_tree_state()
                                 tree_state, count = self.map.get_apple_tree_state()
-                        # if other_state:
-                        #    i.update_buffer_shared(actions, reward, other_state)
-                        # else:
+                            #update and train
                             i.update_next_state_path(tree_state, count)
                             i.update_buffer(reward)
-                            # i.policy.train_shared()
-                        i.policy.train()
-                        # if we are at max timestep increment episode and reset
-                    if eps % 10 == 0:
-                        i.update_epsilon()
-                    self.map.timestep += 1
+                            i.policy.train()
+                            # update epsilon every 10 episodes
+                            if eps % 10 == 0:
+                                i.update_epsilon()
 
-            # draws everything
             self.draw_grid()
             # sleep to make it less fast, can take out if you want it sped up
-            time.sleep(.2)
+            time.sleep(.1)
             # updates display
             pygame.display.update()
 
             # if we are at max timestep increment episode and reset
             if tsteps >= max_tstep or self.map.check_complete():
                 print("EPISODE : " + str(eps) + " COMPLETE")
-                print("EPSILON: ", agents[i].epsilon)
+                print("EPSILON: ", agents[0].epsilon)
                 # if we are at max episode then quit
                 if eps >= max_ep:
                     pygame.quit()

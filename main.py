@@ -57,88 +57,63 @@ def large_orchard():
 
 def small_orchard():
     # 2 agents even split between pick and prune
-    # 8x13
     agent_list = []
+    # Shared replay buffers are not being used, this was for an experiment
     shared_a = ReplayBuffer()
     shared_b = ReplayBuffer()
+    # create agents
     for i in range(1):
         a = orchard_agents.AgentPickSAClimited(
-            41, opposite_buffer=shared_a, shared_buffer=shared_b, action_dim=40)
+            33, opposite_buffer=shared_a, shared_buffer=shared_b, action_dim=32)
         b = orchard_agents.AgentPruneSAClimited(
-            41, opposite_buffer=shared_b, shared_buffer=shared_a, action_dim=40)
+            33, opposite_buffer=shared_b, shared_buffer=shared_a, action_dim=32)
         agent_list.append(a)
         agent_list.append(b)
 
-    # large_orchard = orchard.OrchardMap(
-    #     row_height=5, row_description=large_row32, top_buffer=3, bottom_buffer=2,
-    #     action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
-    #     tree_combos=default_tree_combos)
+    # Small orchard, create
     small_orchard = orchard.OrchardMap(
-        row_height=10, row_description=small_row8, top_buffer=2, bottom_buffer=2,
+        row_height=8, row_description=small_row8, top_buffer=2, bottom_buffer=2,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos, seed=1253)
 
+    # includes the pathdinding map for the A* algo
     pm = create_pathfinding_map(small_orchard.orchard_map, small_row8)
     small_orchard.pathfinding_map = pm
 
+    # includes the pathdinding map for the A* algo for each agent
     small_orchard.create_map(agent_list)
     for i in range(len(agent_list)):
         agent_list[i].pathfinding_map = create_pathfinding_map(small_orchard.orchard_map, small_row8)
-        print(agent_list[i].cur_pose)
 
-    num_eps = 3000
+    # eps, run test
+    num_eps = 500
     test = orchard.OrchardSim(
         orchard_map=small_orchard, agents=agent_list, tstep_max=300, ep_max=num_eps)
-    #  est.run_gui()
-    # To run without GUI (Way faster)
+    # test.run_gui()
     test.run()
-    fig = plt.figure()
+
+    # Plotting and saving data
     average_data = []
-    average_data2 = []
-    average_data3 = []
     window = 50
     color = 'blue'
-    color2 = 'orange'
-    color3 = 'red'
-
     num_rewards = np.array(test.map.rewards)
     rewards_evolution = num_rewards[:, 0]
-
-    # Step 1: Obtain the moving average window
+    # Obtain the moving average window
     for ind in range(len(rewards_evolution) - window + 1):
         average_data.append(np.mean(rewards_evolution[ind:ind + window]))
     label = "Percent of Orchard Complete (MA)"
-
-    # rewards_evolution2 = num_rewards[:, 1]
-    # for ind in range(len(rewards_evolution2) - window + 1):
-    #     average_data2.append(np.mean(rewards_evolution2[ind:ind + window]))
-    # label = "Percent of Apples Picked (MA)"
-
-    # rewards_evolution3 = num_rewards[:, 2]
-    # for ind in range(len(rewards_evolution3) - window + 1):
-    #     average_data3.append(np.mean(rewards_evolution3[ind:ind + window]))
-    # label = "Percent of Trees Pruned (MA)"
     save_dict = {"total": num_rewards[:, 0], "pick": num_rewards[:, 1], "prune": num_rewards[:, 2]}
-    with open("globallocal_pathfinding_1253.pkl", "wb+") as file:
+    # SAVE TO FILE THE REWARD DATA
+    with open("diffsmall_pathfinding_1253.pkl", "wb+") as file:
         pkl.dump(save_dict, file)
     # Step 2: Plot results
     plt.plot(average_data, color=color, label=label)
-    #plt.plot(average_data2, color=color2, label=label)
-    #plt.plot(average_data3, color=color3, label=label)
-    # alpha sets the transparency of the original data
     plt.plot(rewards_evolution, color=color, alpha=0.2, label='Total Percent')
-    #plt.plot(rewards_evolution2, color=color2, alpha=0.2, label='Pick Percent')
-    #plt.plot(rewards_evolution3, color=color3, alpha=0.2, label='Prune Percent')
     plt.xlabel("Episodes")
     plt.ylabel("Percent Complete")
     plt.legend()
-    plt.title("Rollback Buffer Reward: Rollback = 1, Rollback Decay: .5")
-
+    plt.title("Performance")
     plt.show()
-    plt.clf()
-    plt.plot(range(len(test.map.rewards[0])), test.map.rewards[0])
-    plt.plot(range(len(test.map.rewards[-1])), test.map.rewards[-1])
-    plt.legend(['first', 'last'])
 
 
 def small_orchard_single():
