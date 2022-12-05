@@ -238,7 +238,6 @@ class OrchardMap():
                 combined_revealed = np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
                 global_r2 = (((self.picked_apples+self.pruned_trees) / (n1+n2))
                              * 100) + ((((combined-combined_revealed)) / combined)*100) - (path_distance/4)
-                return global_r2, tree_finished
 
                 random_location = self.checklist[np.random.randint(len(self.checklist))]
                 tree_t = self.orchard_map[random_location[0]][random_location[1]]
@@ -288,7 +287,6 @@ class OrchardMap():
                 combined_revealed = np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
                 global_r2 = (((self.picked_apples+self.pruned_trees) / (n1+n2))
                              * 100) + ((((combined-combined_revealed)) / combined)*100) - (path_distance/4)
-                return global_r2, True
 
                 random_location = self.checklist[np.random.randint(len(self.checklist))]
                 tree_t = self.orchard_map[random_location[0]][random_location[1]]

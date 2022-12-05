@@ -83,15 +83,18 @@ diff_r = moving_average(diff_r, smoothness)
 
 plt.plot(range(len(diff_r)), diff_r)
 plt.plot(range(len(difflocal_r)), difflocal_r)
-plt.plot(range(len(diffonly_r)), diffonly_r)
-plt.plot(range(len(global1_r)), global1_r)
-plt.plot(range(len(global3_r)), global3_r)
-plt.plot(range(len(global2_r)), global2_r)
 plt.plot(range(len(local_r)), local_r)
-plt.legend(
-    ["Difference Reward + Local (Slight Shaping)", "Difference Reward + Local (No Shaping)", "Difference Reward",
-     "Global Reward 1 (%Completed + %tasks_revealed)", "Global Reward 1 + Local Reward", "Global Reward 2 (%Completed)",
-     "Local Reward"])
+plt.plot(range(len(diffonly_r)), diffonly_r)
+#plt.plot(range(len(global1_r)), global1_r)
+#plt.plot(range(len(global3_r)), global3_r)
+plt.plot(range(len(global2_r)), global2_r)
+# plt.legend(
+#     ["Difference Reward + Local (Slight Shaping)", "Difference Reward + Local (No Shaping)", "Difference Reward",
+#      "Global Reward 1 (%Completed + %tasks_revealed)", "Global Reward 1 + Local Reward", "Global Reward 2 (%Completed)",
+#      "Local Reward"])
+plt.legend(["Difference Reward + Local (Slight Shaping)", "Difference Reward + Local (No Shaping)",
+            "Local Reward", "Difference Reward", "Global Reward 2 (%Completed)"])
+
 plt.xlabel('Episode')
 plt.ylabel('Average Global Reward')
 plt.title('Smoothed Global Reward (x50)')
