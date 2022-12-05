@@ -351,6 +351,7 @@ def nashq_rewards(agents, map, epsilon_updater):
 
     # main control loop for all agents
 
+    agents_keys = [0,0]
     count = 0
     for i in agents:
         # get valid moves for agent
@@ -375,6 +376,7 @@ def nashq_rewards(agents, map, epsilon_updater):
             other_agent_key = i.agents_keys[-1 - count]
             other_agent_action = key_action_map[other_agent_key]
 
+
             # --- Step 1: Take next action
             # a - Choose Action
             i.move, i.key = i.choose_move_egreedy(points, vals, valid_moves, valid_keys, other_agent_action)
@@ -387,8 +389,15 @@ def nashq_rewards(agents, map, epsilon_updater):
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(i.move, i.action_type, i.id)
             i.move_2, key_2 = i.choose_move_max(points, vals, valid_moves_prime, valid_keys_prime, other_agent_action)
 
-            i.agents_keys[count] = i.key
+            agents_keys[count] = i.key
             count += 1
+
+            # print(i.key, count, i.agents_keys)
+
+    for i in agents:
+        i.agents_keys = agents_keys
+
+    # print("\n", i.agents_keys)
 
     count = 0
     for i in agents:

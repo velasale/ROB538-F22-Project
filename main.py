@@ -65,7 +65,7 @@ def small_orchard(approach: str, epsilon_updater):
     row_height = 3
 
     # Algorithm parameters
-    time_steps = 500
+    time_steps = 1000
     episodes = 1000
 
     # Create Orchard
@@ -96,7 +96,7 @@ def small_orchard(approach: str, epsilon_updater):
 
 if __name__ == "__main__":
 
-    approach = "nash"
+    approach = "global"
     epsilon_updater = 0.999
     test = small_orchard(approach, epsilon_updater)
     # test = large_orchard()

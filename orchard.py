@@ -254,6 +254,9 @@ class OrchardSim():
                 i.reset_agent()
             self.map.reset_map(self.agents)
 
+            if episode == 50:
+                pass
+
         # Step 2: Generate Random Baseline
         for episode in tqdm(range(eps)):
             # Reset map reward every episode
