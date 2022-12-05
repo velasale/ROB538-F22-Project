@@ -54,7 +54,7 @@ class PygameRender():
         self.reward_flag = 0
         self.approach = ""
 
-    def start(self, agents: list, max_ep: int, max_tstep: int):
+    def start(self, agents: list, max_ep: int, max_tstep: int, epsilon_updater):
         #tsteps and episodes
         tsteps = 0
         eps = 0
@@ -76,21 +76,21 @@ class PygameRender():
                 i.previous_pose = i.cur_pose
 
             # --- Learn: Depending on the approach ---
-            if self.approach == "random":
-                agents, self.map = tl.random_learning(agents, self.map)
-            elif self.approach == "local":
-                agents, self.map = tl.local_rewards(agents, self.map)
+            if self.approach == "local":
+                agents, self.map = tl.local_rewards(agents, self.map, epsilon_updater)
             elif self.approach == "global":
-                agents, self.map = tl.global_rewards(agents, self.map)
+                agents, self.map = tl.global_rewards(agents, self.map, epsilon_updater)
             elif self.approach == "diff":
-                agents, self.map = tl.diff_rewards(agents, self.map)
+                agents, self.map = tl.diff_rewards(agents, self.map, epsilon_updater)
             elif self.approach == "follow":
-                agents, self.map = tl.followme_rewards(agents, self.map)
+                agents, self.map = tl.followme_rewards(agents, self.map, epsilon_updater)
             elif self.approach == "dpp":
-                agents, self.map = tl.dpp_rewards(agents, self.map)
+                agents, self.map = tl.dpp_rewards(agents, self.map, epsilon_updater)
+            elif self.approach == "nash":
+                agents, self.map = tl.nashq_rewards(agents, self.map, epsilon_updater)
 
             # Simply select from which episode do you want to see the animation
-            if eps >= 100:
+            if eps >= 500:
                 # 30fps
                 clock.tick(30)
 

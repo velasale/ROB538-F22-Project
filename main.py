@@ -20,17 +20,17 @@ default_prob = [.2, .1, .3, .3, .1]
 default_tree_combos = [1, 2, 3, 4, -10]
 
 # Alejo's To check with only 1 agent and one tree
-default_prob = [0.5, 0.5, 0, 0]
+default_prob = [0.1, 0.1, 0.8, 0]
 default_tree_combos = [1, 2, 3, -10]
 
 # Design A:
-# small_row8 = [0, 0, 0, 0, 0, 0, -20, -10, -20, 0, 0, 0, 0, 0, 0]
+small_row8 = [0, 0, 0, 0, 0, 0, -20, -10, -10, -20, 0, 0, 0, 0, 0, 0]
 
 # Design A:
 # tstep = 500, episodes = 5000, epsilon = 0.99
 # small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
 
-small_row8 = large_row32
+# small_row8 = large_row32
 
 # small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, -20, -10, -10, -20, 0, 0]
 
@@ -55,17 +55,17 @@ def large_orchard():
     test.run()
 
 
-def small_orchard(approach: str):
+def small_orchard(approach: str, epsilon_updater):
     # 2 agents even split between pick and prune
     # 8x13
 
     # Grid parameters
     top_buffer = 2
     bottom_buffer = 2
-    row_height = 4
+    row_height = 3
 
     # Algorithm parameters
-    time_steps = 1000
+    time_steps = 500
     episodes = 1000
 
     # Create Orchard
@@ -79,31 +79,24 @@ def small_orchard(approach: str):
     cols = len(small_row8)
     agent_list = []
 
-    for i in range(4):
+    for i in range(1):
         a = orchard_agents.AgentPick(rows, cols)
         agent_list.append(a)
-    for i in range(4):
+    for i in range(1):
         a = orchard_agents.AgentPrune(rows, cols)
         agent_list.append(a)
 
     test = orchard.OrchardSim(orchard_map=small_orchard, agents=agent_list, tstep_max=time_steps, ep_max=episodes)
-    test.run_gui(approach)
+    # test.run_gui(approach, epsilon_updater)
     # To run without GUI (Way faster)
-    # test.run(approach)
+    test.run(approach, epsilon_updater)
 
     return test
 
 
 if __name__ == "__main__":
 
-    approach = "diff"
-    test = small_orchard(approach)
+    approach = "nash"
+    epsilon_updater = 0.999
+    test = small_orchard(approach, epsilon_updater)
     # test = large_orchard()
-    # test_random = small_orchard("random")
-
-    for i in range(len(test.agents)):
-        tl.plot_reward(test.agents[i].reward_evolution, i)
-        # tl.plot_reward_and_baseline(test.agents[i].reward_evolution, test_random.agents[i].reward_evolution, i)
-        tl.plot_values(test.agents[i].q_sa_table, i)
-    plt.title(approach)
-    plt.show()

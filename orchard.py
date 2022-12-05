@@ -198,17 +198,21 @@ class OrchardSim():
         self.ep_max = ep_max
         self.render = None
 
+        # Copy of map and agents
+        self.map_for_baseline = copy.deepcopy(self.map)
+        self.agents_for_baseline = copy.deepcopy(self.agents)
+
         # Code added by Alejo
         self.map.create_reward_map()
         self.reward_flag = 0
 
-    def run_gui(self, approach):
+    def run_gui(self, approach, epsilon_updater):
         # runs gui
         self.render = pygame_render.PygameRender(self.map)
         self.render.approach = approach
-        self.render.start(self.agents, self.ep_max, self.tsep_max)
+        self.render.start(self.agents, self.ep_max, self.tsep_max, epsilon_updater)
 
-    def run(self, approach:str):
+    def run(self, approach:str, epsilon_updater):
 
         tsteps = self.tsep_max
         eps = self.ep_max
@@ -226,18 +230,18 @@ class OrchardSim():
                     i.previous_pose = i.cur_pose
 
                 # --- Learn: Depending on the approach ---
-                if approach == "random":
-                    self.agents, self.map = tl.random_learning(self.agents, self.map)
-                elif approach == "local":
-                    self.agents, self.map = tl.local_rewards(self.agents, self.map)
+                if approach == "local":
+                    self.agents, self.map = tl.local_rewards(self.agents, self.map, epsilon_updater)
                 elif approach == "global":
-                    self.agents, self.map = tl.global_rewards(self.agents, self.map)
+                    self.agents, self.map = tl.global_rewards(self.agents, self.map, epsilon_updater)
                 elif approach == "diff":
-                    self.agents, self.map = tl.diff_rewards(self.agents, self.map)
+                    self.agents, self.map = tl.diff_rewards(self.agents, self.map, epsilon_updater)
                 elif approach == "follow":
-                    self.agents, self.map = tl.followme_rewards(self.agents, self.map)
+                    self.agents, self.map = tl.followme_rewards(self.agents, self.map, epsilon_updater)
                 elif approach == "dpp":
-                    self.agents, self.map = tl.dpp_rewards(self.agents, self.map)
+                    self.agents, self.map = tl.dpp_rewards(self.agents, self.map, epsilon_updater)
+                elif approach == "nash":
+                    self.agents, self.map = tl.nashq_rewards(self.agents, self.map, epsilon_updater)
 
                 if self.map.check_complete():
                     break
@@ -249,3 +253,48 @@ class OrchardSim():
                 i.reward_evolution.append(i.accumulated_reward)
                 i.reset_agent()
             self.map.reset_map(self.agents)
+
+        # Step 2: Generate Random Baseline
+        for episode in tqdm(range(eps)):
+            # Reset map reward every episode
+            self.map_for_baseline.create_reward_map()
+
+            for steps in range(tsteps):
+
+                # --- Keep track of the two previous poses
+                for i in self.agents_for_baseline:
+                    i.previous_previous_pose = i.previous_pose
+                    i.previous_pose = i.cur_pose
+
+                # --- Learn: Depending on the approach ---
+                if approach == "local":
+                    self.agents_for_baseline, self.map_for_baseline = tl.local_rewards(self.agents_for_baseline, self.map_for_baseline, 1)
+                elif approach == "global":
+                    self.agents_for_baseline, self.map_for_baseline = tl.global_rewards(self.agents_for_baseline, self.map_for_baseline, 1)
+                elif approach == "diff":
+                    self.agents_for_baseline, self.map_for_baseline = tl.diff_rewards(self.agents_for_baseline, self.map_for_baseline, 1)
+                elif approach == "follow":
+                    self.agents_for_baseline, self.map_for_baseline = tl.dpp_rewards(self.agents_for_baseline, self.map_for_baseline, 1)
+                elif approach == "dpp":
+                    self.agents_for_baseline, self.map_for_baseline = tl.random_learning(self.agents_for_baseline, self.map_for_baseline, 1)
+                elif approach == "nash":
+                    self.agents_for_baseline, self.map_for_baseline = tl.nashq_rewards(self.agents_for_baseline, self.map_for_baseline, 1)
+
+                if self.map_for_baseline.check_complete():
+                    break
+
+            # Save rewards and reset
+            # print("\nEpisode: ", str(episode))
+            for i in self.agents_for_baseline:
+                # print(i.interactions, i.ineffective_steps)
+                i.reward_evolution.append(i.accumulated_reward)
+                i.reset_agent()
+            self.map_for_baseline.reset_map(self.agents_for_baseline)
+
+        # Step 3: Plot
+        for i in range(len(self.agents)):
+            # tl.plot_reward(self.agents[i].reward_evolution, i)
+            tl.plot_reward_and_baseline(self.agents[i].reward_evolution, self.agents_for_baseline[i].reward_evolution, i, approach)
+            tl.plot_values(self.agents[i].q_sa_table[:,:,0], i)
+        plt.title(approach)
+        plt.show()

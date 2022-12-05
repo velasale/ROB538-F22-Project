@@ -129,6 +129,8 @@ def global_rewards(agents, map, epsilon_updater):
     for i in agents:
         # --- Step 3: Update Q_sa_values of the agent
         reward = global_reward
+        reward = global_interactions
+
         i.qlearning_update_value(i.move, i.move_2, reward)
         i.accumulated_reward += reward
         # i.accumulated_reward = i.accumulated_reward + global_reward
@@ -209,19 +211,35 @@ def diff_rewards(agents, map, epsilon_updater):
         others_interactions = 0
         others_ineffective_steps = 0
         others_reward = 0
+
+        others_states = []
+        for j in agents:
+            # Build a list with the states of the other agents
+            if j != i:
+                others_states.append(j.move)
         for j in agents:
             if j != i:
                 others_reward += i.reward
                 others_interactions += j.interactions
                 others_ineffective_steps += j.ineffective_steps
+            if j == i:
+                # Step 1: Pick randomly another agent
+                random_placement = np.random.randint(len(others_states))
+                # Step 2: Place agent i=j in the state of the other agent
+                counter_state = others_states[random_placement]
+                # Step 3: Check what would have been the reward
+                counter_reward = map.reward_map[counter_state[0]][counter_state[1]]
+                if counter_reward > 0:
+                    # Dummy step
+                    pass
+                others_reward += counter_reward
 
-        # diff_reward = global_reward - others_reward
-        diff_reward = global_interactions - others_interactions
+        diff_reward = global_reward - others_reward
+        # diff_reward = global_interactions - others_interactions
 
         # --- Step 3: Update Q_sa_values of the agent
         i.qlearning_update_value(i.move, i.move_2, diff_reward)
         i.accumulated_reward += diff_reward
-        # i.accumulated_reward = i.accumulated_reward + global_reward
 
         # update our map with our action choice
         map.update_map(i.cur_pose, i.move, i.key, i.id)
@@ -313,6 +331,91 @@ def dpp_rewards(agents, map, epsilon_updater):
             if i.reward == 10:
                 # Update reward map
                 map.reward_map[i.move[0]][i.move[1]] = -1
+
+    return agents, map
+
+
+def nashq_rewards(agents, map, epsilon_updater):
+    """
+    Assumes that agents' actions are independent.
+    Each agent has its own Q-learning Temporal Difference table
+    :param agents:
+    :param map:
+    :param steps:
+    :return:
+    """
+
+    key_action_map = {"down": 0, "up": 1, "right": 2, "left": 3, "interact": 4}
+    # a = key_action_map["down"]
+    # print(a)
+
+    # main control loop for all agents
+
+    count = 0
+    for i in agents:
+        # get valid moves for agent
+        valid_moves, valid_keys = map.get_valid_moves(i.cur_pose, i.action_type, i.id)
+        # if we have a valid move continue
+        if len(valid_keys) > 0:
+            # get the surrounding area with sensors
+            points, vals = map.get_surroundings(i.cur_pose, 1)
+            # print("Valid moves and valid keys are: ", valid_moves, valid_keys)
+
+            # Avoid going two steps back (I noticed in the simulation agents get stuck between two states)
+            for n, o in zip(valid_moves, valid_keys):
+                if n == i.previous_previous_pose and len(valid_moves) > 1:
+                    valid_moves.remove(n)
+                    valid_keys.remove(o)
+                    # pass
+                    break
+
+            # ---- Qlearning (off-policy TD control) implementation -----
+            # From Sutton & Barto. Reinforcement Learning: An introduction. page 131
+
+            other_agent_key = i.agents_keys[-1 - count]
+            other_agent_action = key_action_map[other_agent_key]
+
+            # --- Step 1: Take next action
+            # a - Choose Action
+            i.move, i.key = i.choose_move_egreedy(points, vals, valid_moves, valid_keys, other_agent_action)
+            # b. Observe reward
+            i.reward = map.reward_map[i.move[0]][i.move[1]]
+            if i.reward == -1:
+                i.ineffective_steps += 1
+
+            # --- Step 2: Choose A_prime from S_prime
+            valid_moves_prime, valid_keys_prime = map.get_valid_moves(i.move, i.action_type, i.id)
+            i.move_2, key_2 = i.choose_move_max(points, vals, valid_moves_prime, valid_keys_prime, other_agent_action)
+
+            i.agents_keys[count] = i.key
+            count += 1
+
+    count = 0
+    for i in agents:
+
+        other_agent_key = i.agents_keys[-1-count]
+        other_agent_action = key_action_map[other_agent_key]
+        count += 1
+
+        # --- Step 3: Update Q_sa_values of the agent using Qlearning
+        i.qlearning_update_value(i.move, i.move_2, i.reward, other_agent_action)
+
+        i.accumulated_reward = i.accumulated_reward + i.reward
+
+        # update our map with our action choice
+        map.update_map(i.cur_pose, i.move, i.key, i.id)
+        # if we moved from a spot we need to update the agents internal current position
+        if i.key != "interact":
+            i.cur_pose = i.move
+        else:
+            i.interactions += 1
+
+        # Update epsilon
+        i.update_epsilon(epsilon_updater)
+
+        if i.reward == 10:
+            # Update reward map
+            map.reward_map[i.move[0]][i.move[1]] = -1
 
     return agents, map
 
