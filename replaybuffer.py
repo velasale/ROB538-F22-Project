@@ -43,8 +43,8 @@ class ReplayBuffer:
         self.prev_timestep = None
 
         # Using list instead of deque for access speed and forward rollout access
-        #self.buffer = deque(maxlen=buffer_size)
-        self.buffer = []
+        self.buffer = deque(maxlen=buffer_size)
+        #self.buffer = []
 
     def update_buffer(self, episode_num: int, timestep_num: int, state: list, action: list, reward: list,
                       next_state: list):

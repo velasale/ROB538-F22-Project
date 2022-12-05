@@ -405,10 +405,17 @@ class SACLimited():
                     self.action_order[action.item()])
                 return possible_actions[indexthing], self.action_order[action], actions
 
+    def select_action_path(self, tree_states):
+        collapsed_state = torch.tensor(tree_states)
+        collapsed_state = torch.flatten(collapsed_state)
+        collapsed_state = collapsed_state.to(device)
+        actions = self.actor(collapsed_state.float())
+        return int(torch.argmax(actions))
+
     def update_buffer(self, state, action, reward, next_state):
-        if reward > 0:
-            self.replay_buffer.update_buffer_rollback_reward(
-                self.enum, rollback=2, rollback_reward=reward, rollback_decay=0.5)
+        # if reward > 0:
+        #     self.replay_buffer.update_buffer_rollback_reward(
+        #         self.enum, rollback=0, rollback_reward=reward, rollback_decay=0.5)
         self.replay_buffer.update_buffer(
             self.enum, self.tnum, state, action, reward, next_state)
         self.tnum += 1
@@ -434,7 +441,7 @@ class SACLimited():
         return a[0]
 
     def train(self):
-        if len(self.replay_buffer) > self.batch_size:
+        if len(self.replay_buffer) > self.batch_size * 5:
             sample = self.replay_buffer.sample(self.batch_size)
             state = [d['state'] for d in sample]
             action = [d['action'] for d in sample]

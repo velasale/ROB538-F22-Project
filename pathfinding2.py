@@ -1,6 +1,8 @@
+import time
 from collections import deque
 import numpy as np
-
+from pathfinding.core.grid import Grid
+from pathfinding.finder.a_star import AStarFinder
 
 small_orchard = [
     [0, 0, 0, 0, 0, 0, 0, 0],
@@ -50,11 +52,10 @@ class WeightedGraph():
         return id not in self.obstacles
 
     def create_checklist(self):
-        # creates a checklist containing all of the x,y location of trees to compare at the end of a timestep
         tree_checklist = []
         for i in range(np.shape(self.orchard_map)[0]):
             for j in range(len(self.row_description)):
-                if self.orchard_map[i, j] != -20 and self.orchard_map[i, j] != 0:
+                if self.orchard_map[i][j] != -20 and self.orchard_map[i][j] != 0:
                     tree_checklist.append((i, j))
         self.obstacles = tree_checklist
 
@@ -80,27 +81,68 @@ class PathFindingBF():
     def __init__(self) -> None:
         pass
 
-    def breadth_first_search(graph, start, goal):
+    def breadth_first_search(self, graph, start, goal):
         frontier = deque()
         frontier.append(start)
-        came_from = []
+        came_from = {}
+        came_from[start] = None
 
-        while not frontier.empty():
+        while (len(frontier) != 0):
             current = frontier.popleft()
             if current == goal:  # early exit
                 break
             for next in graph.neighbors(current):
                 if next not in came_from:
                     frontier.append(next)
-                    came_from.append(current)
+                    came_from[next] = current
         return came_from
 
 
-g = WeightedGraph(small_orchard, small_row8)
-bf = PathFindingBF()
+# g = WeightedGraph(small_orchard, small_row8)
+# bf = PathFindingBF()
 
-start = (0, 1)
-goal = (10, 4)
+# start = (0, 1)
+# goal = (7, 10)
 
-d = bf.breadth_first_search(g, start, goal)
-print(d)
+# for i in g.neighbors((goal)):
+#     print(i)
+# d = bf.breadth_first_search(g, start, goal)
+
+# for i in d:
+#     if
+# print(d)
+
+def create_checklist():
+    tree_checklist = []
+    for i in range(np.shape(small_orchard)[0]):
+        for j in range(len(small_row8)):
+            if small_orchard[i][j] != -20 and small_orchard[i][j] != 0:
+                tree_checklist.append((i, j))
+    return np.array(tree_checklist)
+
+
+def create_checklist2():
+    tree_checklist = np.copy(small_orchard)
+    for i in range(np.shape(small_orchard)[0]):
+        for j in range(len(small_row8)):
+            if small_orchard[i][j] == -20 or small_orchard[i][j] == 0:
+                tree_checklist[i][j] = 1
+    return tree_checklist
+
+
+orch = create_checklist2()
+grid = Grid(matrix=orch)
+
+
+start1 = time.time()
+
+finder = AStarFinder()
+grid = Grid(matrix=orch)
+for i in range(1):
+    start = grid.node(0, 3)
+    end = grid.node(7, 10)
+    path, _ = finder.find_path(start, end, grid)
+
+print(path)
+end1 = time.time()
+print(end1 - start1)

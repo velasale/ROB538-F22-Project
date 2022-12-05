@@ -1,6 +1,8 @@
 import numpy as np
 import pygame_render
-# import copy
+import copy
+from pathfinding.core.grid import Grid
+from pathfinding.finder.a_star import AStarFinder
 # import orchard_agents
 
 
@@ -29,9 +31,12 @@ class OrchardMap():
         self.orchard_map = np.zeros((self.row_height + self.top_buffer + self.bottom_buffer, len(row_description)))
         self.checklist = None
         self.original_map = None
+        self.action_areas = None
         self.picked_apples = 0
         self.pruned_trees = 0
         self.rewards = []
+        self.pathfinding_map = None
+        self.finder = AStarFinder()
         self.episode_rewards = []
         self.timestep = 0
 
@@ -48,6 +53,7 @@ class OrchardMap():
         # Take a copy of the original map (used in update method)
         self.original_map = np.copy(self.orchard_map)
         self.checklist = self.create_checklist()
+        self.action_areas = self.create_valid_action_areas()
         # Spawn the agents at the top center of the map LENGTH NEEDS TO BE LONGER THAN NUMBER OF AGENTS
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         self.checklist = self.create_checklist()
@@ -107,18 +113,23 @@ class OrchardMap():
         # Finds all the valid moves for a given agent
         valid_moves = []
         valid_keys = []
+        invalid_moves = []
         # Is down valid
         if start[0] < self.row_height + self.top_buffer + self.bottom_buffer - 1:
             down = self.orchard_map[start[0]+1, start[1]]
             if down == 0 or down == -20:
                 valid_moves.append([start[0]+1, start[1]])
                 valid_keys.append("down")
+            else:
+                invalid_moves.append([start[0]+1, start[1]])
         # Is up valid
         if start[0] > 0:
             up = self.orchard_map[start[0]-1, start[1]]
             if up == 0 or up == -20:
                 valid_moves.append([start[0]-1, start[1]])
                 valid_keys.append("up")
+            else:
+                invalid_moves.append([start[0]-1, start[1]])
         # Is right valid
         if start[1] < len(self.row_description)-1:
             right = self.orchard_map[start[0], start[1]+1]
@@ -129,6 +140,9 @@ class OrchardMap():
             if right in self.action_map.keys() and action_type == self.action_map[right]:
                 valid_moves.append([start[0], start[1]+1])
                 valid_keys.append("interact")
+
+            if right not in self.action_map.keys() and right != 0 and right != -20:
+                invalid_moves.append([start[0], start[1]+1])
         # Is left valid
         if start[1] > 0:
             left = self.orchard_map[start[0], start[1]-1]
@@ -139,10 +153,15 @@ class OrchardMap():
             if left in self.action_map.keys() and action_type == self.action_map[left]:
                 valid_moves.append([start[0], start[1]-1])
                 valid_keys.append("interact")
-        # returns list of x,y for all valid moves and a list of valid action keys: up, down, left, right, interact
-        return valid_moves, valid_keys
+            if left not in self.action_map.keys() and left != 0 and left != -20:
+                invalid_moves.append([start[0], start[1]-1])
 
-    def update_map(self, start: list, goal: list, key: str, agent_id: int, agent_type: int) -> None:
+        # returns list of x,y for all valid moves and a list of valid action keys: up, down, left, right, interact
+        return valid_moves, valid_keys, invalid_moves
+
+    def update_map_local(
+            self, start: list, goal: list, key: str, agent_id: int, agent_type: int, path_goal, path_distance,
+            start_position) -> None:
 
         # here we can test different types of rewards
 
@@ -157,32 +176,171 @@ class OrchardMap():
             # if we interact we update the action sequence to the next step of the goal area
             # print(self.orchard_map[goal[0]][goal[1]])
             # print(self.action_sequence[self.orchard_map[goal[0]][goal[1]]])
-            self.orchard_map[goal[0]][goal[1]] = self.action_sequence[self.orchard_map[goal[0]][goal[1]]]
-            tree_finished = True
-            if self.orchard_map[goal[0]][goal[1]] != -10:
-                tree_finished = False
-            # print(self.orchard_map[goal[0]][goal[1]])
-            self.episode_rewards.append(1)
-            if agent_type == 1:
-                self.picked_apples += 1
-            elif agent_type == 2:
-                self.pruned_trees += 1
-            return (10 + goal[0]), tree_finished
+            if agent_type == self.action_map[self.orchard_map[goal[0]][goal[1]]]:
+                self.orchard_map[goal[0]][goal[1]] = self.action_sequence[self.orchard_map[goal[0]][goal[1]]]
+                tree_finished = True
+                if self.orchard_map[goal[0]][goal[1]] != -10:
+                    tree_finished = False
+                # print(self.orchard_map[goal[0]][goal[1]])
+                self.episode_rewards.append(1)
+                if agent_type == 1:
+                    self.picked_apples += 1
+                elif agent_type == 2:
+                    self.pruned_trees += 1
+                return (15 - (path_distance/4)), tree_finished
         else:
             # if we move we change our previous location back to the original and update our id location
             self.orchard_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
             self.orchard_map[goal[0]][goal[1]] = agent_id
             self.episode_rewards.append(0)
-            return -1, True
+            moves, keys, invalid = self.get_valid_moves(goal, agent_type)
+            if path_goal == goal and "interact" not in keys:
+                return (-3-path_distance/4), True
+            else:
+                return None, False
+
+    def update_map(
+            self, start: list, goal: list, key: str, agent_id: int, agent_type: int, path_goal, path_distance,
+            start_position) -> None:
+
+        # here we can test different types of rewards
+
+        # base idea is just "if you interact, get +10
+
+        # counterfactual ideas
+        # Pick a random action instead, our action - random action
+        #
+        if key == "interact":
+            # print('WE INTERACTED')
+            # print('interacted at timestep', self.timestep, start, goal)
+            # if we interact we update the action sequence to the next step of the goal area
+            # print(self.orchard_map[goal[0]][goal[1]])
+            # print(self.action_sequence[self.orchard_map[goal[0]][goal[1]]])
+            picked_prev = self.picked_apples
+            pruned_prev = self.pruned_trees
+            combined_revealed_prev = np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
+            if agent_type == self.action_map[self.orchard_map[goal[0]][goal[1]]]:
+                self.orchard_map[goal[0]][goal[1]] = self.action_sequence[self.orchard_map[goal[0]][goal[1]]]
+                tree_finished = True
+                if self.orchard_map[goal[0]][goal[1]] != -10:
+                    tree_finished = False
+                # print(self.orchard_map[goal[0]][goal[1]])
+                self.episode_rewards.append(1)
+                if agent_type == 1:
+                    self.picked_apples += 1
+                elif agent_type == 2:
+                    self.pruned_trees += 1
+
+                combined = np.sum(self.original_map == 3) + np.sum(self.original_map == 4)
+                n1 = np.sum(self.original_map == 1) + combined
+                n2 = np.sum(self.original_map == 2) + combined
+                # global_r = ((self.picked_apples+self.pruned_trees) / (n1+n2)) * 15
+                combined_revealed = np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
+                global_r2 = (((self.picked_apples+self.pruned_trees) / (n1+n2))
+                             * 100) + ((((combined-combined_revealed)) / combined)*100) - (path_distance/4)
+                return global_r2, tree_finished
+
+                random_location = self.checklist[np.random.randint(len(self.checklist))]
+                tree_t = self.orchard_map[random_location[0]][random_location[1]]
+
+                if tree_t in self.action_map.keys() and agent_type == self.action_map[tree_t]:
+                    self.pathfinding_map[random_location[0]][random_location[1]] = 1
+                    pathfinding_grid = Grid(matrix=self.pathfinding_map)
+                    start = pathfinding_grid.node(start_position[1], start_position[0])
+                    end = pathfinding_grid.node(random_location[1], random_location[0])
+                    path_list, _ = self.finder.find_path(start, end, pathfinding_grid)
+                    new_path_distance = len(path_list)
+                    if new_path_distance == 0:
+                        new_path_distance = 5
+                    pruned_prev += 1
+                    if tree_t == 3 or tree_t == 4:
+                        combined_revealed_prev += 1
+                    self.pathfinding_map[random_location[0]][random_location[1]] = -1
+                else:
+                    self.pathfinding_map[random_location[0]][random_location[1]] = 1
+                    pathfinding_grid = Grid(matrix=self.pathfinding_map)
+                    start = pathfinding_grid.node(start_position[1], start_position[0])
+                    end = pathfinding_grid.node(random_location[1], random_location[0])
+                    path_list, _ = self.finder.find_path(start, end, pathfinding_grid)
+                    new_path_distance = len(path_list)
+                    self.pathfinding_map[random_location[0]][random_location[1]] = -1
+
+                global_dif = ((((picked_prev+pruned_prev)) / (n1+n2))
+                              * 100) + ((((combined-combined_revealed_prev)) / combined) * 100) - (new_path_distance/4)
+                diff_r = global_r2 - global_dif
+                return diff_r, tree_finished
+               # return (15 - (path_distance/2)), tree_finished
+        else:
+            picked_prev = self.picked_apples
+            pruned_prev = self.pruned_trees
+            combined_revealed_prev = np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
+            # if we move we change our previous location back to the original and update our id location
+            self.orchard_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
+            self.orchard_map[goal[0]][goal[1]] = agent_id
+            self.episode_rewards.append(0)
+            moves, keys, invalid = self.get_valid_moves(goal, agent_type)
+
+            if path_goal == goal and "interact" not in keys:
+                combined = np.sum(self.original_map == 3) + np.sum(self.original_map == 4)
+                n1 = np.sum(self.original_map == 1) + combined
+                n2 = np.sum(self.original_map == 2) + combined
+  #              global_r = ((self.picked_apples+self.pruned_trees) / (n1+n2)) * 15
+                combined_revealed = np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
+                global_r2 = (((self.picked_apples+self.pruned_trees) / (n1+n2))
+                             * 100) + ((((combined-combined_revealed)) / combined)*100) - (path_distance/4)
+                return global_r2, True
+
+                random_location = self.checklist[np.random.randint(len(self.checklist))]
+                tree_t = self.orchard_map[random_location[0]][random_location[1]]
+
+                if tree_t in self.action_map.keys() and agent_type == self.action_map[tree_t]:
+                    self.pathfinding_map[random_location[0]][random_location[1]] = 1
+                    pathfinding_grid = Grid(matrix=self.pathfinding_map)
+                    start = pathfinding_grid.node(start_position[1], start_position[0])
+                    end = pathfinding_grid.node(random_location[1], random_location[0])
+                    path_list, _ = self.finder.find_path(start, end, pathfinding_grid)
+                    new_path_distance = len(path_list)
+                    if new_path_distance == 0:
+                        new_path_distance = 5
+                    pruned_prev += 1
+                    if tree_t == 3 or tree_t == 4:
+                        combined_revealed_prev += 1
+                    self.pathfinding_map[random_location[0]][random_location[1]] = -1
+                else:
+                    self.pathfinding_map[random_location[0]][random_location[1]] = 1
+                    pathfinding_grid = Grid(matrix=self.pathfinding_map)
+                    start = pathfinding_grid.node(start_position[1], start_position[0])
+                    end = pathfinding_grid.node(random_location[1], random_location[0])
+                    path_list, _ = self.finder.find_path(start, end, pathfinding_grid)
+                    new_path_distance = len(path_list)
+                    self.pathfinding_map[random_location[0]][random_location[1]] = -1
+
+                global_dif = ((((picked_prev+pruned_prev)) / (n1+n2))
+                              * 100) + ((((combined-combined_revealed_prev)) / combined) * 100) - (new_path_distance/4)
+                diff_r = global_r2 - global_dif
+
+                return diff_r, True
+                # return (-3-path_distance/2), True
+            else:
+                return None, False
 
     def create_checklist(self):
         # creates a checklist containing all of the x,y location of trees to compare at the end of a timestep
         tree_checklist = []
         for i in range(np.shape(self.orchard_map)[0]):
             for j in range(len(self.row_description)):
-                if self.orchard_map[i][j] in self.tree_combos and self.orchard_map[i][j] != -10:
+                if self.orchard_map[i][j] in self.tree_combos:
                     tree_checklist.append([i, j])
-        tree_checklist.reverse()
+
+        return np.array(tree_checklist)
+
+    def create_valid_action_areas(self):
+        # creates a checklist containing all of the x,y location of trees to compare at the end of a timestep
+        tree_checklist = []
+        for i in range(np.shape(self.orchard_map)[0]):
+            for j in range(len(self.row_description)):
+                if self.orchard_map[i][j] == -20:
+                    tree_checklist.append([i, j])
         return np.array(tree_checklist)
 
     def check_complete(self):
@@ -200,7 +358,7 @@ class OrchardMap():
         pruned = self.pruned_trees
         self.orchard_map = np.copy(self.original_map)
 
-        #self.rewards.append([self.picked_apples, self.pruned_trees])
+        # self.rewards.append([self.picked_apples, self.pruned_trees])
         self.episode_rewards = []
         self.timestep = 0
         self.picked_apples = 0
@@ -216,9 +374,11 @@ class OrchardMap():
         # start2 = [np.random.randint(10),np.random.randint(5)]
         # self.orchard_map[start2[0]][start2[1]] = agents[0].robot_class
         # agents[0].cur_pose = [start2[0],start2[1]]
-        n1 = np.sum(self.orchard_map == 1) + np.sum(self.orchard_map == 3)
+        combined = np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
+
+        n1 = np.sum(self.orchard_map == 1) + combined
         print(n1, 'total apples to pick this time')
-        n2 = np.sum(self.orchard_map == 2) + np.sum(self.orchard_map == 4)
+        n2 = np.sum(self.orchard_map == 2) + combined
         print(n2, 'total trees to prune this time')
         apple_percent = (picked / n1)
         prune_percent = (pruned / n2)
@@ -228,21 +388,25 @@ class OrchardMap():
 
     def get_apple_tree_state(self):
         tree_state = []
+        count = 0
         for i in self.checklist:
             if self.orchard_map[i[0]][i[1]] == 1 or self.orchard_map[i[0]][i[1]] == 3:
                 tree_state.append(1)
+                count += 1
             else:
                 tree_state.append(0)
-        return tree_state
+        return tree_state, count
 
     def get_prune_tree_state(self):
         tree_state = []
+        count = 0
         for i in self.checklist:
             if self.orchard_map[i[0]][i[1]] == 2 or self.orchard_map[i[0]][i[1]] == 4:
                 tree_state.append(1)
+                count += 1
             else:
                 tree_state.append(0)
-        return tree_state
+        return tree_state, count
 
 
 class DiscreteOrchardSim():
@@ -297,7 +461,7 @@ class DiscreteOrchardSim():
                     # update our map with our action choice
                     print(self.map.orchard_map)
                     print(key)
-                    reward = self.map.update_map(i.cur_pose, move, key, i.id)
+                    reward = self.map.update_map(i.cur_pose, move, key, i.id, i.goal_position, i.path_distance)
                     # print(i.cur_pose)
                     # if we moved from a spot we need to update the agents internal current position
                     if key != "interact":
@@ -331,7 +495,6 @@ class OrchardSim():
         # driver
         self.map = orchard_map
         self.agents = agents
-        self.map.create_map(self.agents)
         self.tsep_max = tstep_max
         self.ep_max = ep_max
         self.render = None
@@ -350,13 +513,13 @@ class OrchardSim():
             # print(self.map.orchard_map)
             for i in self.agents:
                 # get valid moves for agent
-                valid_moves, valid_keys = self.map.get_valid_moves(i.cur_pose, i.action_type)
+                valid_moves, valid_keys, invalid_moves = self.map.get_valid_moves(i.cur_pose, i.action_type)
                 # print(self.map.orchard_map)
                 # if we have a valid move continue
                 # print(valid_keys)
                 if len(valid_keys) > 0:
                     # get the surrounding area with sensors
-                    #points, vals = self.map.get_surroundings(i.cur_pose, 10)
+                    # points, vals = self.map.get_surroundings(i.cur_pose, 10)
                     # i.apply_sensor(points,vals,tsteps+1)
                     # if internal channel is set we want to communicate
                     # if i.comms_channel != None:
@@ -368,50 +531,82 @@ class OrchardSim():
                     # Agent chooses move doesnt do anything yet
                     start_pos = i.cur_pose.copy()
                     if i.action_type == 2:
-                        tree_state = self.map.get_prune_tree_state()
+                        tree_state, count = self.map.get_prune_tree_state()
                     else:
-                        tree_state = self.map.get_apple_tree_state()
+                        tree_state, count = self.map.get_apple_tree_state()
                     # move, key, actions = i.choose_move(points, vals, valid_moves, valid_keys, start_pos)
-                    move, key, actions = i.choose_move_tree(tree_state, valid_moves, valid_keys, start_pos)
-                    # print(key)
-
-                    # REMOVE RANDOM MOVE ONCE CHOOSE MOVE IMPLEMENTED ONLY FOR DEMO
-                    # move, key = i.random_move(valid_moves, valid_keys)
-                    # update our map with our action choice
-                    reward, tree_finished = self.map.update_map(i.cur_pose, move, key, i.id, i.action_type)
-                    # if eps % 100 == 0:
-                    # print(self.map.orchard_map)
-                    # print(actions)
-                    # print(reward)
-                    # print(i.cur_pose)
-                    # if we moved from a spot we need to update the agents internal current position
-                    if key != "interact":
-                        i.cur_pose = move
-                    # i.apply_sensor(next_points, next_vals,tsteps+1.5)
-                    other_state = None
-                    if i.action_type == 2:
-                        if reward > 0 and tree_finished == False:
-                            other_state = self.map.get_apple_tree_state()
-                        tree_state = self.map.get_prune_tree_state()
-                    else:
-                        if reward > 0 and tree_finished == False:
-                            other_state = self.map.get_prune_tree_state()
-                        tree_state = self.map.get_apple_tree_state()
-                    i.update_next_state(tree_state, i.cur_pose.copy())
+                    move, key, same_location = i.choose_move_tree_path(
+                        tree_state, self.map.action_areas, valid_moves, valid_keys, start_pos, invalid_moves, count)
+                    # if i.action_type == 1:
+                    #     print(i.goal_position)
+                    #     print(i.goal_distance)
+                    # # print(key)
+                    if same_location:
+                        reward = -50
+                        # if i.action_type == 2:
+                        # print(reward)
+                        other_state = None
+                        if i.action_type == 2:
+                            if reward > 0 and tree_finished == False:
+                                other_state = self.map.get_apple_tree_state()
+                            tree_state, count = self.map.get_prune_tree_state()
+                        else:
+                            if reward > 0 and tree_finished == False:
+                                other_state = self.map.get_prune_tree_state()
+                            tree_state, count = self.map.get_apple_tree_state()
                     # if other_state:
                     #    i.update_buffer_shared(actions, reward, other_state)
                     # else:
-                    i.update_buffer(actions, reward)
-                    # i.policy.train_shared()
-                    i.policy.train()
-                    # if we are at max timestep increment episode and reset
-                    if eps % 10 == 0:
-                        i.update_epsilon()
+                        i.update_next_state_path(tree_state, count)
+                        i.update_buffer(reward)
+                        # i.policy.train_shared()
+                        i.policy.train()
+
+                    if move:
+                        # REMOVE RANDOM MOVE ONCE CHOOSE MOVE IMPLEMENTED ONLY FOR DEMO
+                        # move, key = i.random_move(valid_moves, valid_keys)
+                        # update our map with our action choice
+                        reward, tree_finished = self.map.update_map(
+                            i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
+
+                        # if eps % 100 == 0:
+                        # print(self.map.orchard_map)
+                        # print(actions)
+                        # print(reward)
+                        # print(i.cur_pose)
+                        # if we moved from a spot we need to update the agents internal current position
+                        if key != "interact":
+                            i.cur_pose = move
+                        # i.apply_sensor(next_points, next_vals,tsteps+1.5)
+                        if reward:
+                            # print(reward)
+                            # print(reward)
+                            other_state = None
+                            if i.action_type == 2:
+                                if reward > 0 and tree_finished == False:
+                                    other_state = self.map.get_apple_tree_state()
+                                tree_state, count = self.map.get_prune_tree_state()
+                            else:
+                                if reward > 0 and tree_finished == False:
+                                    other_state = self.map.get_prune_tree_state()
+                                tree_state, count = self.map.get_apple_tree_state()
+                        # if other_state:
+                        #    i.update_buffer_shared(actions, reward, other_state)
+                        # else:
+                            i.update_next_state_path(tree_state, count)
+                            i.update_buffer(reward)
+                            # i.policy.train_shared()
+                            i.policy.train()
+                        # if we are at max timestep increment episode and reset
+                            if eps % 10 == 0:
+                                i.update_epsilon()
                     self.map.timestep += 1
                     if tsteps >= self.tsep_max or self.map.check_complete():
                         print("EPISODE : " + str(eps) + " COMPLETE")
                         # if we are at max episode then quit
                         if eps >= self.ep_max:
+                            #    self.render = pygame_render.PygameRender(self.map)
+                            #    self.render.start(self.agents, self.ep_max, self.tsep_max)
                             return
                         # reset tsteps
                         tsteps = 0
