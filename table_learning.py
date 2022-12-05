@@ -1,64 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-# TODO improve Global Reward formula
 
-
-def random_learning(agents, map):
-    """
-    Random Learning to use as a Baseline
-    Simply keep epsilon = 1
-    :param agents:
-    :param map:
-    :param steps:
-    :return:
-    """
-
-    # main control loop for all agents
-    for i in agents:
-
-        i.epsilon = 1
-
-        # get valid moves for agent
-        valid_moves, valid_keys = map.get_valid_moves(i.cur_pose, i.action_type, i.id)
-        # if we have a valid move continue
-        if len(valid_keys) > 0:
-            # get the surrounding area with sensors
-            points, vals = map.get_surroundings(i.cur_pose, 3)
-            # print("Valid moves and valid keys are: ", valid_moves, valid_keys)
-
-            # --- Step 1: Take next action ---
-            # a - Observe next state
-            move, key = i.choose_move_egreedy(points, vals, valid_moves, valid_keys)
-
-            # b. Observe reward
-            reward = map.reward_map[move[0]][move[1]]
-
-            # --- Step 2: Choose A_prime from S_prime
-            valid_moves_prime, valid_keys_prime = map.get_valid_moves(move, i.action_type, i.id)
-            move_2, key_2 = i.choose_move_egreedy(points, vals, valid_moves_prime, valid_keys_prime)
-
-            # --- Step 3: Update Q_sa_values of the agent
-            i.qlearning_update_value(move, move_2, reward)
-            i.accumulated_reward = i.accumulated_reward + reward
-
-            # update our map with our action choice
-            map.update_map(i.cur_pose, move, key, i.id)
-            # if we moved from a spot we need to update the agents internal current position
-            if key != "interact":
-                i.cur_pose = move
-
-            # Update epsilon
-            # i.update_epsilon()
-
-            if reward == 10:
-                # Update reward map
-                map.reward_map[move[0]][move[1]] = -1
-
-    return agents, map
-
-
-def local_rewards(agents, map):
+def local_rewards(agents, map, epsilon_updater):
     """
     Assumes that agents' actions are independent.
     Each agent has its own Q-learning Temporal Difference table
@@ -115,7 +59,7 @@ def local_rewards(agents, map):
                 i.interactions += 1
 
             # Update epsilon
-            i.update_epsilon()
+            i.update_epsilon(epsilon_updater)
 
             if reward == 10:
                 # Update reward map
@@ -124,7 +68,7 @@ def local_rewards(agents, map):
     return agents, map
 
 
-def global_rewards(agents, map):
+def global_rewards(agents, map, epsilon_updater):
     """
     Assumes that agents' actions are independent, hence each agent has its own Q-learning Temporal Difference
     The system/global reward is kept based on the sum of the rewards from all agents.
@@ -173,17 +117,20 @@ def global_rewards(agents, map):
     # Global Reward
     global_interactions = 0
     global_ineffective_steps = 0
+    global_reward = 0
     for i in agents:
+        global_reward += i.reward
         global_interactions += i.interactions
         global_ineffective_steps += i.ineffective_steps
+
     # global_reward = 1 * global_interactions - global_ineffective_steps
-    global_reward = 1 * global_interactions
+    # global_reward = 1 * global_interactions
 
     for i in agents:
         # --- Step 3: Update Q_sa_values of the agent
-        reward = i.reward + global_reward
+        reward = global_reward
         i.qlearning_update_value(i.move, i.move_2, reward)
-        i.accumulated_reward = i.accumulated_reward + reward
+        i.accumulated_reward += reward
         # i.accumulated_reward = i.accumulated_reward + global_reward
 
         # update our map with our action choice
@@ -195,7 +142,7 @@ def global_rewards(agents, map):
             i.interactions += 1
 
         # Update epsilon
-        i.update_epsilon()
+        i.update_epsilon(epsilon_updater)
 
         if i.reward == 10:
             # Update reward map
@@ -204,7 +151,7 @@ def global_rewards(agents, map):
     return agents, map
 
 
-def diff_rewards(agents, map):
+def diff_rewards(agents, map, epsilon_updater):
     """
     Assumes that agents' actions are independent, hence each agent has its own Q-learning Temporal Difference
     The system/global reward is kept based on the sum of the rewards from all agents.
@@ -251,27 +198,29 @@ def diff_rewards(agents, map):
     # Global Reward
     global_interactions = 0
     global_ineffective_steps = 0
+    global_reward = 0
     for i in agents:
+        global_reward += i.reward
         global_interactions += i.interactions
         global_ineffective_steps += i.ineffective_steps
-    global_reward = 10 * global_interactions / global_ineffective_steps
 
     for i in agents:
         # Obtain the counterfactual reward
         others_interactions = 0
         others_ineffective_steps = 0
+        others_reward = 0
         for j in agents:
             if j != i:
+                others_reward += i.reward
                 others_interactions += j.interactions
                 others_ineffective_steps += j.ineffective_steps
 
-        others_reward = 10 * others_interactions / others_ineffective_steps
-
-        diff_reward = global_reward - others_reward
+        # diff_reward = global_reward - others_reward
+        diff_reward = global_interactions - others_interactions
 
         # --- Step 3: Update Q_sa_values of the agent
         i.qlearning_update_value(i.move, i.move_2, diff_reward)
-        i.accumulated_reward = i.accumulated_reward + diff_reward
+        i.accumulated_reward += diff_reward
         # i.accumulated_reward = i.accumulated_reward + global_reward
 
         # update our map with our action choice
@@ -283,7 +232,7 @@ def diff_rewards(agents, map):
             i.interactions += 1
 
         # Update epsilon
-        i.update_epsilon()
+        i.update_epsilon(epsilon_updater)
 
         if i.reward == 10:
             # Update reward map
@@ -292,7 +241,7 @@ def diff_rewards(agents, map):
     return agents, map
 
 
-def dpp_rewards(agents, map):
+def dpp_rewards(agents, map, epsilon_updater):
     """
     Assumes that agents' actions are independent.
     Each agent has its own Q-learning Temporal Difference
@@ -359,7 +308,7 @@ def dpp_rewards(agents, map):
                 i.interactions += 1
 
             # Update epsilon
-            i.update_epsilon()
+            i.update_epsilon(epsilon_updater)
 
             if i.reward == 10:
                 # Update reward map
@@ -452,7 +401,7 @@ def plot_reward(rewards_evolution: list, i):
     plt.title(i)
 
 
-def plot_reward_and_baseline(rewards_evolution_1: list, rewards_evolution_2, i):
+def plot_reward_and_baseline(rewards_evolution_1: list, rewards_evolution_2, i, approach: str):
     """
     Plots RL rewards evolution with a shaded background
     :param rewards_evolution:
@@ -462,8 +411,7 @@ def plot_reward_and_baseline(rewards_evolution_1: list, rewards_evolution_2, i):
     fig = plt.figure()
     average_data_1 = []
     average_data_2 = []
-    window = len(rewards_evolution_1) // 25
-
+    window = len(rewards_evolution_1) // 40
 
     # Step 1: Obtain the moving average window
     for ind in range(len(rewards_evolution_1) - window + 1):
@@ -471,14 +419,14 @@ def plot_reward_and_baseline(rewards_evolution_1: list, rewards_evolution_2, i):
     for ind in range(len(rewards_evolution_2) - window + 1):
         average_data_2.append(np.mean(rewards_evolution_2[ind:ind + window]))
 
-    label = "Moving Average with " + str(window) + " window"
-
     # Step 2: Plot results
     # alpha sets the transparency of the original data
     color = 'blue'
+    label = approach + " - Moving Average with " + str(window) + " window"
     plt.plot(average_data_1, color=color, label=label)
-    # plt.plot(rewards_evolution_1, color=color, alpha=0.25, label='Original Data')
+    # plt.plot(rewards_evolution_1, color=color, alpha=0.1, label='Original Data')
     color = 'black'
+    label = "Random - Moving Average with " + str(window) + " window"
     plt.plot(average_data_2, color=color, label=label)
     # plt.plot(rewards_evolution_2, color=color, alpha=0.1, label='Random - Original Data')
 
