@@ -346,12 +346,9 @@ def nashq_rewards(agents, map, epsilon_updater):
     """
 
     key_action_map = {"down": 0, "up": 1, "right": 2, "left": 3, "interact": 4}
-    # a = key_action_map["down"]
-    # print(a)
 
     # main control loop for all agents
-
-    agents_keys = [0,0]
+    agents_keys = [0, 0]
     count = 0
     for i in agents:
         # get valid moves for agent
@@ -376,14 +373,11 @@ def nashq_rewards(agents, map, epsilon_updater):
             other_agent_key = i.agents_keys[-1 - count]
             other_agent_action = key_action_map[other_agent_key]
 
-
             # --- Step 1: Take next action
             # a - Choose Action
             i.move, i.key = i.choose_move_egreedy(points, vals, valid_moves, valid_keys, other_agent_action)
             # b. Observe reward
             i.reward = map.reward_map[i.move[0]][i.move[1]]
-            if i.reward == -1:
-                i.ineffective_steps += 1
 
             # --- Step 2: Choose A_prime from S_prime
             valid_moves_prime, valid_keys_prime = map.get_valid_moves(i.move, i.action_type, i.id)
@@ -416,8 +410,6 @@ def nashq_rewards(agents, map, epsilon_updater):
         # if we moved from a spot we need to update the agents internal current position
         if i.key != "interact":
             i.cur_pose = i.move
-        else:
-            i.interactions += 1
 
         # Update epsilon
         i.update_epsilon(epsilon_updater)
@@ -536,7 +528,7 @@ def plot_reward_and_baseline(rewards_evolution_1: list, rewards_evolution_2, i, 
     color = 'blue'
     label = approach + " - Moving Average with " + str(window) + " window"
     plt.plot(average_data_1, color=color, label=label)
-    # plt.plot(rewards_evolution_1, color=color, alpha=0.1, label='Original Data')
+    plt.plot(rewards_evolution_1, color=color, alpha=0.1, label='Original Data')
     color = 'black'
     label = "Random - Moving Average with " + str(window) + " window"
     plt.plot(average_data_2, color=color, label=label)

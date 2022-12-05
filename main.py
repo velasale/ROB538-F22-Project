@@ -15,20 +15,20 @@ default_action_sequence = {1: -10, 2: -10, 3: 2, 4: 1, -10: -10}
 # Action mappings, A pruner with action type 1 can do action sequences 1 or 3
 default_action_map = {1: 1, 2: 2, 3: 1, 4: 2}
 # probability for each tree to have an action sequence
-default_prob = [.2, .1, .3, .3, .1]
+# default_prob = [.2, .1, .3, .3, .1]
 # Tree representations (Mostly for GUI)
 default_tree_combos = [1, 2, 3, 4, -10]
 
 # Alejo's To check with only 1 agent and one tree
-default_prob = [0.1, 0.1, 0.8, 0]
+default_prob = [0, 0, 1, 0]
 default_tree_combos = [1, 2, 3, -10]
 
 # Design A:
-small_row8 = [0, 0, 0, 0, 0, 0, -20, -10, -10, -20, 0, 0, 0, 0, 0, 0]
+# small_row8 = [0, 0, 0, 0, 0, 0, -20, -10, -10, -20, 0, 0, 0, 0, 0, 0]
 
 # Design A:
 # tstep = 500, episodes = 5000, epsilon = 0.99
-# small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
+small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
 
 # small_row8 = large_row32
 
@@ -60,8 +60,8 @@ def small_orchard(approach: str, epsilon_updater):
     # 8x13
 
     # Grid parameters
-    top_buffer = 2
-    bottom_buffer = 2
+    top_buffer = 4
+    bottom_buffer = 4
     row_height = 3
 
     # Algorithm parameters
@@ -96,7 +96,7 @@ def small_orchard(approach: str, epsilon_updater):
 
 if __name__ == "__main__":
 
-    approach = "global"
-    epsilon_updater = 0.999
+    approach = "local"
+    epsilon_updater = 0.99
     test = small_orchard(approach, epsilon_updater)
     # test = large_orchard()

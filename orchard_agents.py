@@ -17,7 +17,6 @@ class AgentBase():
         # Alejo's
         # Q_state_action table for each agent
         self.q_sa_table = np.zeros((rows, cols, 5))
-        self.q_sa_table_3d = np.zeros((rows, cols, 5))
         self.learning_rate = 0.05
         self.epsilon = 1.0
         self.gamma = 0.9

@@ -90,7 +90,7 @@ class PygameRender():
                 agents, self.map = tl.nashq_rewards(agents, self.map, epsilon_updater)
 
             # Simply select from which episode do you want to see the animation
-            if eps >= 500:
+            if eps >= 400:
                 # 30fps
                 clock.tick(30)
 
