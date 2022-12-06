@@ -471,8 +471,8 @@ class OrchardSim():
         eps = 0
         while True:
             # main control loop for all agents
+            tsteps += 1
             for i in self.agents:
-                # get valid moves for agent
                 valid_moves, valid_keys, invalid_moves = self.map.get_valid_moves(i.cur_pose, i.action_type)
                 if len(valid_keys) > 0:
                     # get agent position
@@ -535,12 +535,13 @@ class OrchardSim():
                             # update epsilon every 10 episodes
                             if eps % 10 == 0:
                                 i.update_epsilon()
-                    self.map.timestep += 1
+
                     if tsteps >= self.tsep_max or self.map.check_complete():
                         print("EPISODE : " + str(eps) + " COMPLETE")
                         # if we are at max episode then quit
                         if eps >= self.ep_max:
                             # VISUALIZE HERE
+                            self.map.reset_map(self.agents)
                             self.render = pygame_render.PygameRender(self.map)
                             self.render.start(self.agents, self.ep_max, self.tsep_max)
                             return
@@ -552,4 +553,3 @@ class OrchardSim():
                         self.map.reset_map(self.agents)
                         eps += 1
                     # increment timestep
-                    tsteps += 1

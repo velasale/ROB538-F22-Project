@@ -11,6 +11,7 @@ large_row32 = [0, 0, -20, -10, -10, -20, 0, 0, -20, -10, -10, -20, 0,
                0, -20, -10, -10, -20, 0, 0, -20, -10, -10, -20, 0, 0,
                -20, -10, -10, -20, 0, 0]
 small_row8 = [0, -20, -10, -10, -20, 0, -20, -10, -10, -20, 0]
+small_row16 = [0, -20, -10, -10, -20, 0, -20, -10, -10, -20, 0, -20, -10, -10, -20, 0, -20, -10, -10, -20, 0]
 
 
 # action flow ( ex: 3 -> 2 -> -10(done) )
@@ -55,7 +56,7 @@ def large_orchard():
     test.run()
 
 
-def small_orchard():
+def small_orchard8():
     # 2 agents even split between pick and prune
     agent_list = []
     # Shared replay buffers are not being used, this was for an experiment
@@ -86,7 +87,7 @@ def small_orchard():
         agent_list[i].pathfinding_map = create_pathfinding_map(small_orchard.orchard_map, small_row8)
 
     # eps, run test
-    num_eps = 500
+    num_eps = 3000
     test = orchard.OrchardSim(
         orchard_map=small_orchard, agents=agent_list, tstep_max=300, ep_max=num_eps)
     # test.run_gui()
@@ -104,7 +105,68 @@ def small_orchard():
     label = "Percent of Orchard Complete (MA)"
     save_dict = {"total": num_rewards[:, 0], "pick": num_rewards[:, 1], "prune": num_rewards[:, 2]}
     # SAVE TO FILE THE REWARD DATA
-    with open("diffsmall_pathfinding_1253.pkl", "wb+") as file:
+    with open("diffsmall8_2_pathfinding_1253.pkl", "wb+") as file:
+        pkl.dump(save_dict, file)
+    # Step 2: Plot results
+    plt.plot(average_data, color=color, label=label)
+    plt.plot(rewards_evolution, color=color, alpha=0.2, label='Total Percent')
+    plt.xlabel("Episodes")
+    plt.ylabel("Percent Complete")
+    plt.legend()
+    plt.title("Performance")
+    plt.show()
+
+
+def small_orchard():
+    # 2 agents even split between pick and prune
+    agent_list = []
+    # Shared replay buffers are not being used, this was for an experiment
+    shared_a = ReplayBuffer()
+    shared_b = ReplayBuffer()
+    # create agents
+    for i in range(3):
+        a = orchard_agents.AgentPickSAClimited(
+            65, opposite_buffer=shared_a, shared_buffer=shared_b, action_dim=64)
+        b = orchard_agents.AgentPruneSAClimited(
+            65, opposite_buffer=shared_b, shared_buffer=shared_a, action_dim=64)
+        agent_list.append(a)
+        agent_list.append(b)
+
+    # Small orchard, create
+    small_orchard = orchard.OrchardMap(
+        row_height=8, row_description=small_row16, top_buffer=2, bottom_buffer=2,
+        action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
+        tree_combos=default_tree_combos, seed=1253)
+
+    # includes the pathdinding map for the A* algo
+    pm = create_pathfinding_map(small_orchard.orchard_map, small_row16)
+    small_orchard.pathfinding_map = pm
+
+    # includes the pathdinding map for the A* algo for each agent
+    small_orchard.create_map(agent_list)
+    for i in range(len(agent_list)):
+        agent_list[i].pathfinding_map = create_pathfinding_map(small_orchard.orchard_map, small_row16)
+
+    # eps, run test
+    num_eps = 3000
+    test = orchard.OrchardSim(
+        orchard_map=small_orchard, agents=agent_list, tstep_max=300, ep_max=num_eps)
+    test.run_gui()
+    test.run()
+
+    # Plotting and saving data
+    average_data = []
+    window = 50
+    color = 'blue'
+    num_rewards = np.array(test.map.rewards)
+    rewards_evolution = num_rewards[:, 0]
+    # Obtain the moving average window
+    for ind in range(len(rewards_evolution) - window + 1):
+        average_data.append(np.mean(rewards_evolution[ind:ind + window]))
+    label = "Percent of Orchard Complete (MA)"
+    save_dict = {"total": num_rewards[:, 0], "pick": num_rewards[:, 1], "prune": num_rewards[:, 2]}
+    # SAVE TO FILE THE REWARD DATA
+    with open("diffsmall16_6_pathfinding_1253.pkl", "wb+") as file:
         pkl.dump(save_dict, file)
     # Step 2: Plot results
     plt.plot(average_data, color=color, label=label)
@@ -149,5 +211,5 @@ def small_orchard_single():
 
 
 if __name__ == "__main__":
-    test = small_orchard()
+    test = small_orchard8()
     # test = large_orchard()
