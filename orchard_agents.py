@@ -265,6 +265,7 @@ class AgentPruneSAC(AgentBase):
         self.epsilon = 1  
         self.action_order = ['left','right','up','down','interact']
 
+
     def choose_move(self, observed_points, observed_vals, valid_moves, valid_keys, cur_pos = None):
         # randomly chooses a valid move
         # points is a list of the observed points, observed vals is a list of corresponding id of each x,y
@@ -273,8 +274,10 @@ class AgentPruneSAC(AgentBase):
         if np.random.rand() > self.epsilon:
             action, action_key, actions = self.policy.select_action(self.memory[:,:,:,0],valid_moves, valid_keys)
             actions = actions.detach().tolist()
+
         else:
             action, action_key, actions = self.random_move(valid_moves, valid_keys)
+
         
         return action, action_key, actions
     
@@ -310,6 +313,8 @@ class AgentPickSAClimited(AgentBase):
         self.prev_state = []
         self.cf_state = []
         self.action_order = ['left','right','up','down','interact']
+        self.missed_interacts = 0
+
         
     def choose_move_tree(self, tree_states, valid_moves, valid_keys, cur_pos, other_pos):
         # randomly chooses a valid move
@@ -317,14 +322,18 @@ class AgentPickSAClimited(AgentBase):
         # returns the [x,y] of next move and the key: up, down, left, right or interact
         # print(self.memory[:,:,2,0])
         self.state = tree_states + cur_pos + other_pos
-        
+        missed = False
         if np.random.rand() > self.epsilon:
             action, action_key, actions = self.policy.select_action(tree_states,valid_moves, valid_keys, cur_pos, other_pos)
             actions = actions.detach().tolist()
+            if 'interact' in valid_keys and action_key != 'interact':
+                self.missed_interacts +=1
+                assert(np.argmax(actions) != 4)
+                missed=True
         else:
             action, action_key, actions = self.random_move(valid_moves, valid_keys)
         
-        return action, action_key, actions
+        return action, action_key, actions, missed
 
     def random_move(self, valid_moves, valid_keys):
         # randomly chooses a valid move, takes in a list of valid x,y moves and the corresponding valid keys
@@ -375,21 +384,26 @@ class AgentPruneSAClimited(AgentBase):
         self.state = []
         self.prev_state = []
         self.action_order = ['left','right','up','down','interact']
+        self.missed_interacts = 0
         
     def choose_move_tree(self, tree_states, valid_moves, valid_keys, cur_pos, other_pos):
         # randomly chooses a valid move
         # points is a list of the observed points, observed vals is a list of corresponding id of each x,y
         # returns the [x,y] of next move and the key: up, down, left, right or interact
         # print(self.memory[:,:,2,0])
-        
+        missed = False
         self.state = tree_states + cur_pos+ other_pos
         if np.random.rand() > self.epsilon:
             action, action_key, actions = self.policy.select_action(tree_states,valid_moves, valid_keys, cur_pos, other_pos)
             actions = actions.detach().tolist()
+            if 'interact' in valid_keys and action_key != 'interact':
+                self.missed_interacts +=1
+                missed = True
+                assert(np.argmax(actions) != 4)
         else:
             action, action_key, actions = self.random_move(valid_moves, valid_keys)
         
-        return action, action_key, actions
+        return action, action_key, actions, missed
 
     def random_move(self, valid_moves, valid_keys):
         # randomly chooses a valid move, takes in a list of valid x,y moves and the corresponding valid keys

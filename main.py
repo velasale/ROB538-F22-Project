@@ -44,7 +44,7 @@ def large_orchard():
 def small_orchard():
     # 2 agents even split between pick and prune
     # 8x13
-    test_name = 'DF1_new_global_old_critic'
+    test_name = 'FixedTreeReward'
 
     agent_list = []
     for i in range(1):
@@ -70,7 +70,7 @@ def small_orchard():
     plt.plot(range(num_eps),g_rewards)
     plt.title('Episode Global Rewards')
     plt.xlabel('Episode')
-    plt.ylabel('Reward (Pruned*Picked)')
+    plt.ylabel('Reward (Pruned + Picked)')
     plt.show()
     plt.clf()
     
@@ -83,14 +83,21 @@ def small_orchard():
     plt.xlabel('Episode')
     plt.ylabel('Percent of Relevant Trees Interacted with')
     plt.show()
+    plt.clf()
 
-    
+    misses = np.array(test.missed)
+    plt.plot(range(len(misses)),misses[:,0])
+    plt.plot(range(len(misses)),misses[:,1])
+    plt.title('Missed trees by policy')
+    plt.xlabel('Episode')
+    plt.ylabel('Number of trees of each type missed')
+    plt.show()
 
 
 def small_orchard_single():
     # 2 agents even split between pick and prune
     # 8x13
-    test_name = 'DF1_new_global_random_pos'
+    test_name = 'Detailed Tree Reward'
     agent_list = []
     for i in range(1):
         a = orchard_agents.AgentPickSAClimited(40)

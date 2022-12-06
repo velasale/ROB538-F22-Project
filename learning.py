@@ -263,8 +263,10 @@ class SAC():
         collapsed_state = torch.flatten(collapsed_state)
         collapsed_state = collapsed_state.to(device)
         actions = self.actor(collapsed_state.float())
+        print(actions)
         action_prob_order = torch.argsort(actions)
         action_prob_order = action_prob_order.flip(0)
+        print(action_prob_order)
         for action in action_prob_order:
             if self.action_order[action] in action_keys:
                 indexthing = action_keys.index(self.action_order[action.item()])
@@ -402,7 +404,7 @@ class SACLimited():
             reward = []
             next_state = []
             cf_reward = []
-            cf_state = []
+            # cf_state = []
             for timestep in sample:
                 state.append(timestep['state'])
                 # print('timestep state')
@@ -412,7 +414,7 @@ class SACLimited():
                 reward.append(timestep['reward'])
                 next_state.append(timestep['next_state'])
                 cf_reward.append(timestep['cf_reward'])
-                cf_state.append(timestep['cf_state'])
+                # cf_state.append(timestep['cf_state'])
             state = torch.tensor(state)
             state = torch.flatten(state, start_dim=1)
             state = state.to(device).float()
@@ -428,9 +430,9 @@ class SACLimited():
             cf_reward = torch.tensor(cf_reward)
             cf_reward = cf_reward.to(device).float()
 
-            cf_state = torch.tensor(cf_state)
-            cf_state = torch.flatten(cf_state, start_dim=1)
-            cf_state = cf_state.to(device).float()
+            # cf_state = torch.tensor(cf_state)
+            # cf_state = torch.flatten(cf_state, start_dim=1)
+            # cf_state = cf_state.to(device).float()
             
             action_probabilities = self.actor(state)
             current_Q = self.critic(state,action).sum(dim=1)

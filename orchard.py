@@ -42,6 +42,7 @@ class OrchardMap():
         self.global_reward = []
         self.episode_global_rewards = []
         self.num_trees = []
+        self.travel_dists = []
 
     def create_map(self, agents: list = None) -> None:
         rng = np.random.default_rng(42)
@@ -64,10 +65,8 @@ class OrchardMap():
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         self.checklist, other = self.create_checklist()
         points = np.random.choice(len(other), len(agents))
-        print(agents[0].robot_class)
         for i in range(len(agents)):
             point_ind = points[i]
-            print(other[point_ind], agents[i].robot_class)
             self.orchard_map[other[point_ind][0]][other[point_ind][1]] = agents[i].robot_class + i
             # sets the start pose of agents and the ids
             agents[i].cur_pose = [other[point_ind][0],other[point_ind][1]]
@@ -76,6 +75,8 @@ class OrchardMap():
         self.total_apples = np.sum(self.orchard_map == 1) + np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
         self.total_leaves = np.sum(self.orchard_map == 2) + np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
         self.num_trees.append([self.total_apples, self.total_leaves])
+        temp = self.orchard_map.shape
+        self.travel_dists = np.zeros([temp[0],temp[1],2])
         # print(self.num_trees[-1])
         # print(self.orchard_map)
 
@@ -103,8 +104,6 @@ class OrchardMap():
         points = []
         values = []
         apple_map = np.zeros([sight_length*2+1,sight_length*2+1])
-        print('apple map')
-        print(apple_map)
         # loop through and find the points and corresponding values for each cell around you
         for i in range(up, down+1):
             for j in range(left, right+1):
@@ -182,15 +181,25 @@ class OrchardMap():
             self.episode_rewards.append(1)
             if agent_type == 1:
                 self.picked_apples += 1
+                tree_reward = self.get_pick_recursive(start)
             elif agent_type == 2:
                 self.pruned_trees += 1
-            return self.pruned_trees + self.picked_apples - self.get_closest_tree(start)/10
+                tree_reward = self.get_prune_recursive(start)
+            temp = self.orchard_map.shape
+            self.travel_dists = np.zeros([temp[0],temp[1],2])
+            return self.pruned_trees + self.picked_apples - tree_reward/10
         else:
             # if we move we change our previous location back to the original and update our id location
             self.orchard_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
             self.orchard_map[goal[0]][goal[1]] = agent_id
             self.episode_rewards.append(0)
-            return self.pruned_trees + self.picked_apples - self.get_closest_tree(goal)/10
+            if agent_type == 1:
+                tree_reward = self.get_pick_recursive(start)
+            elif agent_type == 2:
+                tree_reward = self.get_prune_recursive(start)
+            temp = self.orchard_map.shape
+            self.travel_dists = np.zeros([temp[0],temp[1],2])
+            return self.pruned_trees + self.picked_apples - tree_reward/10
         
     def update_cf_map(self, start: list, goal: list, key: str, agent_id: int, agent_type: int) -> None:
 
@@ -200,18 +209,29 @@ class OrchardMap():
         # counterfactual ideas
         # Pick a random action instead, our action - random action
         # 
-        if key == "interact":
-            self.cf_map[goal[0]][goal[1]] = self.action_sequence[self.cf_map[goal[0]][goal[1]]]
-            if agent_type == 1:
-                temp = self.pruned_trees+(self.picked_apples+1)
-            else:
-                temp = (self.pruned_trees+1)+self.picked_apples - self.get_closest_tree(start)/10
-            return temp
+        if agent_type == 1:
+            tree_reward = self.get_pick_recursive(start)
+        elif agent_type == 2:
+            tree_reward = self.get_prune_recursive(start)
+        temp = self.orchard_map.shape
+        print('tree reward',tree_reward)
+        self.travel_dists = np.zeros([temp[0],temp[1],2])
+        if 'interact' in key:
+            return self.pruned_trees+self.picked_apples - tree_reward/10 + 1
         else:
-            # if we move we change our previous location back to the original and update our id location
-            self.cf_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
-            self.cf_map[goal[0]][goal[1]] = agent_id
-            return self.pruned_trees + self.picked_apples - self.get_closest_tree(goal)/10
+            return self.pruned_trees+self.picked_apples - tree_reward/10
+        # if key == "interact":
+        #     self.cf_map[goal[0]][goal[1]] = self.action_sequence[self.cf_map[goal[0]][goal[1]]]
+        #     if agent_type == 1:
+        #         temp = self.pruned_trees+(self.picked_apples+1)
+        #     else:
+        #         temp = (self.pruned_trees+1)+self.picked_apples - self.get_closest_tree(start)/10
+        #     return temp
+        # else:
+        #     # if we move we change our previous location back to the original and update our id location
+        #     self.cf_map[start[0]][start[1]] = self.original_map[start[0]][start[1]]
+        #     self.cf_map[goal[0]][goal[1]] = agent_id
+        #     return self.pruned_trees + self.picked_apples - self.get_closest_tree(goal)/10
         
     def create_checklist(self):
         # creates a checklist containing all of the x,y location of trees to compare at the end of a timestep
@@ -259,7 +279,8 @@ class OrchardMap():
         # # self.orchard_map[start2[0]][start2[1]] = agents[0].robot_class
         # # agents[0].cur_pose = [start2[0],start2[1]]
         n1 = np.sum(self.orchard_map == 1) + np.sum(self.orchard_map == 3)
-        print(n1, 'total apples to pick in the future')
+        print(self.total_apples, 'total apples to pick in the future')
+        print(self.total_leaves, 'total leaves to prune in the future')
         self.cf_map = self.orchard_map.copy()
 
     def get_apple_tree_state(self, cf=False):
@@ -308,6 +329,159 @@ class OrchardMap():
                     min_dist = min(a,min_dist)
         return min_dist
     
+    def get_closest_apple_tree(self, pose, cf=False):
+        min_dist = 100
+        if cf:
+            for tree in self.checklist:
+                if (1 == self.cf_map[tree[0]][tree[1]]) or (self.cf_map[tree[0]][tree[1]] == 3):
+                    a = abs(tree[0] - pose[0]) + abs(tree[1] - pose[1]) 
+                    min_dist = min(a,min_dist)
+        else:
+            for tree in self.checklist:
+                if (1 == self.orchard_map[tree[0]][tree[1]]) or (self.orchard_map[tree[0]][tree[1]] == 3):
+                    a = abs(tree[0] - pose[0]) + abs(tree[1] - pose[1]) 
+                    min_dist = min(a,min_dist)
+        return min_dist
+    
+    def get_closest_prune_tree(self, pose, cf=False):
+        min_dist = 100
+        if cf:
+            for tree in self.checklist:
+                if (2 ==  self.cf_map[tree[0]][tree[1]]) or (self.cf_map[tree[0]][tree[1]] == 4):
+                    a = abs(tree[0] - pose[0]) + abs(tree[1] - pose[1]) 
+                    min_dist = min(a,min_dist)
+        else:
+            for tree in self.checklist:
+                if (2 ==  self.orchard_map[tree[0]][tree[1]]) or (self.orchard_map[tree[0]][tree[1]] == 4):
+                    a = abs(tree[0] - pose[0]) + abs(tree[1] - pose[1]) 
+                    min_dist = min(a,min_dist)
+        return min_dist
+    
+    def get_prune_recursive(self,start):
+        search_point = start.copy()
+        self.travel_dists[search_point[0],search_point[1]] = 3
+        if search_point[0] < self.row_height + self.top_buffer + self.bottom_buffer - 1:
+            if self.travel_dists[search_point[0] + 1, search_point[1], 1] == 0:
+                down = self.orchard_map[start[0]+1, start[1]]
+                if down == 2 or down == 4:
+                    self.travel_dists[search_point[0]+1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 1]
+                elif down == 0 or -20:
+                    self.travel_dists[search_point[0]+1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 0]
+                else:
+                    self.travel_dists[search_point[0]+1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 2]
+        # Is up valid
+        if search_point[0] > 0:
+            if self.travel_dists[search_point[0] - 1, search_point[1], 1] == 0:
+                up = self.orchard_map[start[0]-1, start[1]]
+                if up == 2 or up == 4:
+                    self.travel_dists[search_point[0]-1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 1]
+                elif up == 0 or -20:
+                    self.travel_dists[search_point[0]-1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 0]
+                else:
+                    self.travel_dists[search_point[0]-1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 2]
+        # Is right valid
+        if search_point[1] < len(self.row_description)-1:
+            if self.travel_dists[search_point[0], search_point[1]+1, 1] == 0:
+                right = self.orchard_map[start[0], start[1]+1]
+                if right == 2 or right == 4:
+                    self.travel_dists[search_point[0], search_point[1]+1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 1]
+                    return int(self.travel_dists[search_point[0],search_point[1],0]+1)
+                elif right == 0 or -20:
+                    self.travel_dists[search_point[0], search_point[1]+1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 0]
+                else:
+                    self.travel_dists[search_point[0], search_point[1]+1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 2]
+        # Is left valid
+        if search_point[1] > 0:
+            if self.travel_dists[search_point[0], search_point[1]-1, 1] == 0:
+                left = self.orchard_map[start[0], start[1]-1]
+                if left == 2 or left == 4:
+                    self.travel_dists[search_point[0], search_point[1]-1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 1]
+                    return int(self.travel_dists[search_point[0],search_point[1],0]+1)
+                elif left == 0 or -20:
+                    self.travel_dists[search_point[0], search_point[1]-1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 0]
+                else:
+                    self.travel_dists[search_point[0], search_point[1]-1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 2]
+        down_dist, up_dist, left_dist, right_dist = 100,100,100,100
+        if search_point[0] < self.row_height + self.top_buffer + self.bottom_buffer - 1:
+            # print(search_point[0]+1, search_point[1])
+            if self.travel_dists[search_point[0] + 1, search_point[1], 1] == 0:
+                down_dist = self.get_prune_recursive([search_point[0]+1, search_point[1]])
+        if start[0] > 0:
+            # print(search_point[0]-1, search_point[1])
+            if self.travel_dists[search_point[0] - 1, search_point[1], 1] == 0:
+                up_dist = self.get_prune_recursive([search_point[0]-1, search_point[1]])
+        if start[1] < len(self.row_description)-1:
+            if self.travel_dists[search_point[0], search_point[1]+1, 1] == 0:
+                left_dist = self.get_prune_recursive([search_point[0], search_point[1]+1])
+        if start[1] > 0:
+            if self.travel_dists[search_point[0], search_point[1]-1, 1] == 0:
+                right_dist = self.get_prune_recursive([search_point[0], search_point[1]-1])
+        temp = self.orchard_map.shape
+        # print([down_dist,up_dist,left_dist,right_dist])
+        return min([down_dist,up_dist,left_dist,right_dist])
+
+    def get_pick_recursive(self,start):
+        search_point = start.copy()
+        self.travel_dists[search_point[0],search_point[1]] = 3
+
+        if search_point[0] < self.row_height + self.top_buffer + self.bottom_buffer - 1:
+            if self.travel_dists[search_point[0] + 1, search_point[1], 1] == 0:
+                down = self.orchard_map[start[0]+1, start[1]]
+                if down == 1 or down == 3:
+                    self.travel_dists[search_point[0]+1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 1]
+                elif down == 0 or -20:
+                    self.travel_dists[search_point[0]+1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 0]
+                else:
+                    self.travel_dists[search_point[0]+1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 2]
+        # Is up valid
+        if start[0] > 0:
+            if self.travel_dists[search_point[0] - 1, search_point[1], 1] == 0:
+                up = self.orchard_map[start[0]-1, start[1]]
+                if up == 1 or up == 3:
+                    self.travel_dists[search_point[0]-1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 1]
+                elif up == 0 or -20:
+                    self.travel_dists[search_point[0]-1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 0]
+                else:
+                    self.travel_dists[search_point[0]-1, search_point[1],:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 2]
+        # Is right valid
+        if start[1] < len(self.row_description)-1:
+            if self.travel_dists[search_point[0], search_point[1]+1, 1] == 0:
+                right = self.orchard_map[start[0], start[1]+1]
+                if right == 1 or right == 3:
+                    self.travel_dists[search_point[0], search_point[1]+1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 1]
+                    return int(self.travel_dists[search_point[0],search_point[1],0]+1)
+                elif right == 0 or -20:
+                    self.travel_dists[search_point[0], search_point[1]+1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 0]
+                else:
+                    self.travel_dists[search_point[0], search_point[1]+1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 2]
+        # Is left valid
+        if start[1] > 0:
+            if self.travel_dists[search_point[0], search_point[1]-1, 1] == 0:
+                left = self.orchard_map[start[0], start[1]-1]
+                if left == 1 or left == 3:
+                    self.travel_dists[search_point[0], search_point[1]-1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 1]
+                    return int(self.travel_dists[search_point[0],search_point[1],0]+1)
+                elif left == 0 or -20:
+                    self.travel_dists[search_point[0], search_point[1]-1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 0]
+                else:
+                    self.travel_dists[search_point[0], search_point[1]-1,:] = [self.travel_dists[search_point[0],search_point[1],0]+1, 2]
+        down_dist, up_dist, left_dist, right_dist = 100,100,100,100
+        if search_point[0] < self.row_height + self.top_buffer + self.bottom_buffer - 1:
+            if self.travel_dists[search_point[0] + 1, search_point[1], 1] == 0:
+                down_dist = self.get_prune_recursive([search_point[0]+1, search_point[1]])
+        if start[0] > 0:
+            if self.travel_dists[search_point[0] - 1, search_point[1], 1] == 0:
+                up_dist = self.get_prune_recursive([search_point[0]-1, search_point[1]])
+        if start[1] < len(self.row_description)-1:
+            if self.travel_dists[search_point[0], search_point[1]+1, 1] == 0:
+                left_dist = self.get_prune_recursive([search_point[0], search_point[1]+1])
+        if start[1] > 0:
+            if self.travel_dists[search_point[0], search_point[1]-1, 1] == 0:
+                right_dist = self.get_prune_recursive([search_point[0], search_point[1]-1])
+        temp = self.orchard_map.shape
+        # print([down_dist,up_dist,left_dist,right_dist])
+        return min([down_dist,up_dist,left_dist,right_dist])
+         
     def save_data(self,filepath=None):
         if filepath is None:
             filepath = 'GIVEFILEPATH'
@@ -382,6 +556,10 @@ class DiscreteOrchardSim():
                     
                     if tsteps >= self.tsep_max or self.map.check_complete():
                         print("EPISODE : " + str(eps) + " COMPLETE")
+                        print(f'{self.agents[0].missed_interacts} missed apple picks')
+                        print(f'{self.agents[1].missed_interacts} missed prunes')
+                        self.agents[0].missed_interacts = 0
+                        self.agents[1].missed_interacts = 0
                         # if we are at max episode then quit
                         if eps >= self.ep_max:
                             return
@@ -403,12 +581,12 @@ class OrchardSim():
         self.map = orchard_map
         self.agents = agents
 
-        print(agents[0].robot_class)
         self.map.create_map(self.agents)
         self.tsep_max = tstep_max
         self.ep_max = ep_max
         self.render = None
-        
+        self.missed = []
+
 
     def run_gui(self):
         # runs gui
@@ -448,7 +626,7 @@ class OrchardSim():
                     else:
                         tree_state = self.map.get_apple_tree_state()
                     # move, key, actions = i.choose_move(points, vals, valid_moves, valid_keys, start_pos)
-                    move, key, actions = i.choose_move_tree(tree_state, valid_moves, valid_keys, start_pos, self.agents[c].cur_pose)
+                    move, key, actions, missed = i.choose_move_tree(tree_state, valid_moves, valid_keys, start_pos, self.agents[c].cur_pose)
                     cf_move, cf_key, cf_actions = i.random_move(valid_moves, valid_keys)
                     # print(key)
 
@@ -459,10 +637,11 @@ class OrchardSim():
                     # print(actions)
                     # print(self.map.cf_map)
                     # print(cf_actions)
-                    cf_reward = self.map.update_cf_map(i.cur_pose, cf_move, cf_key, i.id, i.action_type)
+                    cf_reward = self.map.update_cf_map(i.cur_pose, cf_move, valid_keys, i.id, i.action_type)
                     reward = self.map.update_map(i.cur_pose, move, key, i.id, i.action_type)
                     
-
+                    # if missed:
+                    #     print(f'reward v cf reward, {reward} v {cf_reward}')
                     # if we moved from a spot we need to update the agents internal current position
                     if key != "interact":
                         i.cur_pose = move
@@ -494,6 +673,12 @@ class OrchardSim():
                     if tsteps >= self.tsep_max or self.map.check_complete():
                         print("EPISODE : " + str(eps) + " COMPLETE")
                         # if we are at max episode then quit
+                        print(f'{self.agents[0].missed_interacts} missed apple picks')
+                        print(f'{self.agents[1].missed_interacts} missed prunes')
+                        print(self.agents[0].epsilon, self.agents[1].epsilon)
+                        self.missed.append([self.agents[0].missed_interacts,self.agents[1].missed_interacts])
+                        self.agents[0].missed_interacts = 0
+                        self.agents[1].missed_interacts = 0
                         if eps >= self.ep_max:
                             return
                         # reset tsteps
