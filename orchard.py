@@ -73,15 +73,15 @@ class OrchardMap():
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         for i in range(len(agents)):
             # sets the start pose of agents and the ids
-            # self.orchard_map[0][start + i] = agents[i].robot_class
-            # agents[i].cur_pose = [0, start + i]
+            self.orchard_map[0][start + i] = agents[i].robot_class
+            agents[i].cur_pose = [0, start + i]
 
             agents[i].id = agents[i].robot_class + i
 
             # Alejo's modifications (random spawn)
-            col = random.randrange(0, len(self.row_description))
-            self.orchard_map[0][col] = agents[i].robot_class
-            agents[i].cur_pose = [0, col]
+            # col = random.randrange(0, len(self.row_description))
+            # self.orchard_map[0][col] = agents[i].robot_class
+            # agents[i].cur_pose = [0, col]
 
     def get_surroundings(self, start: list, sight_length: int):
         # Gets the sight_length x sight_length area around the agent
@@ -178,13 +178,13 @@ class OrchardMap():
         start = (len(self.row_description) // 2) - (len(agents) // 2)
         for i in range(len(agents)):
             # sets the start pose of agents and the ids
-            # self.orchard_map[0][start + i] = agents[i].robot_class
-            # agents[i].cur_pose = [0, start + i]
+            self.orchard_map[0][start + i] = agents[i].robot_class
+            agents[i].cur_pose = [0, start + i]
 
             # Alejo's modifications (random spawn)
-            col = random.randrange(0, len(self.row_description))
-            self.orchard_map[0][col] = agents[i].robot_class
-            agents[i].cur_pose = [0, col]
+            # col = random.randrange(0, len(self.row_description))
+            # self.orchard_map[0][col] = agents[i].robot_class
+            # agents[i].cur_pose = [0, col]
 
 
 class OrchardSim():
@@ -298,6 +298,6 @@ class OrchardSim():
         for i in range(len(self.agents)):
             tl.plot_reward(self.agents[i].reward_evolution, i)
             # tl.plot_reward_and_baseline(self.agents[i].reward_evolution, self.agents_for_baseline[i].reward_evolution, i, approach)
-            tl.plot_values(self.agents[i].q_sa_table[:,:,0], i)
+            tl.plot_values(self.agents[i].q_sa_table[0,:,:], i)
         plt.title(approach)
         plt.show()

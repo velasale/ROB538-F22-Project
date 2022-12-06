@@ -16,10 +16,10 @@ class AgentBase():
 
         # Alejo's
         # Q_state_action table for each agent
-        self.q_sa_table = np.zeros((rows, cols, 5))
+        self.q_sa_table = np.zeros((5, rows, cols))
         self.learning_rate = 0.05
         self.epsilon = 1.0
-        self.gamma = 0.9
+        self.gamma = 0.99
         self.accumulated_reward = 0
         self.reward_evolution = []
         self.reward = 0
@@ -100,14 +100,14 @@ class AgentBase():
         """
         # --- Q learning algorithm ---
         # Q(S,A) <-- Q(S,A) + alpha * [R + gamma * max Q(S',a) - Q(S,A)]
-        current_value = self.q_sa_table[state[0]][state[1]][other_agent_action]  # current Q(S,A)
-        prime_value = self.q_sa_table[s_prime[0]][s_prime[1]][other_agent_action]  # maxQ(S',a)
+        current_value = self.q_sa_table[other_agent_action][state[0]][state[1]]  # current Q(S,A)
+        prime_value = self.q_sa_table[other_agent_action][s_prime[0]][s_prime[1]]  # maxQ(S',a)
         next_value = current_value + self.learning_rate * (reward + self.gamma * prime_value - current_value)
 
         # Update value in Q_sa_table
-        self.q_sa_table[state[0]][state[1]][other_agent_action] = next_value  # update Q(S,A)
+        self.q_sa_table[other_agent_action][state[0]][state[1]] = next_value  # update Q(S,A)
 
-    def choose_move_egreedy(self, observed_points, observed_vals, valid_moves, valid_keys, other_agent_action =0):
+    def choose_move_egreedy(self, observed_points, observed_vals, valid_moves, valid_keys, other_agent_action = 0):
         """ Chooses next move from a list (valid_moves) following an epsilon greedy policy
         """
 
@@ -117,7 +117,7 @@ class AgentBase():
             see = valid_moves[i]
             see_row = see[0]
             see_col = see[1]
-            values.append(self.q_sa_table[see_row][see_col][other_agent_action])
+            values.append(self.q_sa_table[other_agent_action][see_row][see_col])
 
         # --- Step 1: Implement e-greedy to select the next move
         choice = self.epsilon_greedy(values, self.epsilon)
@@ -134,7 +134,7 @@ class AgentBase():
             see = valid_moves[i]
             see_row = see[0]
             see_col = see[1]
-            values.append(self.q_sa_table[see_row][see_col][other_agent_action])
+            values.append(self.q_sa_table[other_agent_action][see_row][see_col])
 
         # --- Step 1: Simply choose max to select the next move
         choice = np.argmax(values)

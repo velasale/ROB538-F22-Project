@@ -24,11 +24,11 @@ default_prob = [0, 0, 1, 0]
 default_tree_combos = [1, 2, 3, -10]
 
 # Design A:
-# small_row8 = [0, 0, 0, 0, 0, 0, -20, -10, -10, -20, 0, 0, 0, 0, 0, 0]
+small_row8 = [0, 0, 0, 0, 0, 0, -20, -10, -10, -20, 0, 0, 0, 0, 0, 0]
 
 # Design A:
 # tstep = 500, episodes = 5000, epsilon = 0.99
-small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
+# small_row8 = [0, 0, 0, -20, -10, -20, 0, 0, 0, -20, -10, -20, 0, 0, 0]
 
 # small_row8 = large_row32
 
@@ -62,10 +62,10 @@ def small_orchard(approach: str, epsilon_updater):
     # Grid parameters
     top_buffer = 4
     bottom_buffer = 4
-    row_height = 3
+    row_height = 6
 
     # Algorithm parameters
-    time_steps = 1000
+    time_steps = 5000
     episodes = 1000
 
     # Create Orchard
@@ -96,7 +96,7 @@ def small_orchard(approach: str, epsilon_updater):
 
 if __name__ == "__main__":
 
-    approach = "local"
-    epsilon_updater = 0.99
+    approach = "nash"
+    epsilon_updater = 0.995
     test = small_orchard(approach, epsilon_updater)
     # test = large_orchard()
