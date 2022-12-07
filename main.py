@@ -63,7 +63,7 @@ def small_orchard8():
     shared_a = ReplayBuffer()
     shared_b = ReplayBuffer()
     # create agents
-    for i in range(1):
+    for i in range(2):
         a = orchard_agents.AgentPickSAClimited(
             33, opposite_buffer=shared_a, shared_buffer=shared_b, action_dim=32)
         b = orchard_agents.AgentPruneSAClimited(
@@ -89,7 +89,7 @@ def small_orchard8():
     # eps, run test
     num_eps = 3000
     test = orchard.OrchardSim(
-        orchard_map=small_orchard, agents=agent_list, tstep_max=300, ep_max=num_eps)
+        orchard_map=small_orchard, agents=agent_list, tstep_max=150, ep_max=num_eps)
     # test.run_gui()
     test.run()
 
@@ -105,7 +105,7 @@ def small_orchard8():
     label = "Percent of Orchard Complete (MA)"
     save_dict = {"total": num_rewards[:, 0], "pick": num_rewards[:, 1], "prune": num_rewards[:, 2]}
     # SAVE TO FILE THE REWARD DATA
-    with open("diffsmall8_2_pathfinding_1253.pkl", "wb+") as file:
+    with open("globalorig_small8_4_pathfinding_1253.pkl", "wb+") as file:
         pkl.dump(save_dict, file)
     # Step 2: Plot results
     plt.plot(average_data, color=color, label=label)
@@ -114,27 +114,27 @@ def small_orchard8():
     plt.ylabel("Percent Complete")
     plt.legend()
     plt.title("Performance")
-    plt.show()
+    # plt.show()
 
 
-def small_orchard():
+def small_orchard16():
     # 2 agents even split between pick and prune
     agent_list = []
     # Shared replay buffers are not being used, this was for an experiment
     shared_a = ReplayBuffer()
     shared_b = ReplayBuffer()
     # create agents
-    for i in range(3):
+    for i in range(1):
         a = orchard_agents.AgentPickSAClimited(
-            65, opposite_buffer=shared_a, shared_buffer=shared_b, action_dim=64)
+            81, opposite_buffer=shared_a, shared_buffer=shared_b, action_dim=80)
         b = orchard_agents.AgentPruneSAClimited(
-            65, opposite_buffer=shared_b, shared_buffer=shared_a, action_dim=64)
+            81, opposite_buffer=shared_b, shared_buffer=shared_a, action_dim=80)
         agent_list.append(a)
         agent_list.append(b)
 
     # Small orchard, create
     small_orchard = orchard.OrchardMap(
-        row_height=8, row_description=small_row16, top_buffer=2, bottom_buffer=2,
+        row_height=10, row_description=small_row16, top_buffer=2, bottom_buffer=2,
         action_sequence=default_action_sequence, action_map=default_action_map, tree_prob=default_prob,
         tree_combos=default_tree_combos, seed=1253)
 
@@ -148,10 +148,10 @@ def small_orchard():
         agent_list[i].pathfinding_map = create_pathfinding_map(small_orchard.orchard_map, small_row16)
 
     # eps, run test
-    num_eps = 3000
+    num_eps = 4000
     test = orchard.OrchardSim(
-        orchard_map=small_orchard, agents=agent_list, tstep_max=300, ep_max=num_eps)
-    test.run_gui()
+        orchard_map=small_orchard, agents=agent_list, tstep_max=200, ep_max=num_eps)
+    # test.run_gui()
     test.run()
 
     # Plotting and saving data
@@ -166,7 +166,7 @@ def small_orchard():
     label = "Percent of Orchard Complete (MA)"
     save_dict = {"total": num_rewards[:, 0], "pick": num_rewards[:, 1], "prune": num_rewards[:, 2]}
     # SAVE TO FILE THE REWARD DATA
-    with open("diffsmall16_6_pathfinding_1253.pkl", "wb+") as file:
+    with open("globallarge16_2_4000_pathfinding_1253.pkl", "wb+") as file:
         pkl.dump(save_dict, file)
     # Step 2: Plot results
     plt.plot(average_data, color=color, label=label)
@@ -175,7 +175,7 @@ def small_orchard():
     plt.ylabel("Percent Complete")
     plt.legend()
     plt.title("Performance")
-    plt.show()
+    # plt.show()
 
 
 def small_orchard_single():
@@ -211,5 +211,5 @@ def small_orchard_single():
 
 
 if __name__ == "__main__":
-    test = small_orchard8()
+    test = small_orchard16()
     # test = large_orchard()

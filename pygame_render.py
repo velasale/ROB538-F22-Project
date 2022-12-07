@@ -100,10 +100,10 @@ class PygameRender():
                     if move:
                         # update the map and get our reward
                         # CHANGE REWARD SCHEME HERE
-                        # reward, tree_finished = self.map.update_map_local(
-                        #     i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
-                        reward, tree_finished = self.map.update_map_diff(
+                        reward, tree_finished = self.map.update_map_local(
                             i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
+                        # reward, tree_finished = self.map.update_map_diff(
+                        #     i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
                         # reward, tree_finished = self.map.update_map_global(
                         #     i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
 

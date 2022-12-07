@@ -10,6 +10,10 @@ import matplotlib.pyplot as plt
 
 def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
+    rewards_evolution = []
+    for ind in range(len(rewards_evolution) - w + 1):
+        x.append(np.mean(rewards_evolution[ind:ind + w]))
+    return rewards_evolution
 
 
 smoothness = 50

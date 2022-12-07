@@ -174,6 +174,7 @@ class AgentPickSAClimited(AgentBase):
             self.act = [0]*self.action_dim
             self.start_position = self.cur_pose
             #self.state = tree_states + list(np.ndarray.flatten(np.array(valid_action_areas))) + cur_pos
+            #self.state = [count] + tree_states + list(np.ndarray.flatten(np.array(valid_action_areas))) + cur_pos
             self.state = [count] + tree_states + cur_pos
             self.start_position = cur_pos
             # agent choice
@@ -304,6 +305,7 @@ class AgentPruneSAClimited(AgentBase):
             self.act = [0]*self.action_dim
             self.start_position = self.cur_pose
             #self.state = tree_states + list(np.ndarray.flatten(np.array(valid_action_areas))) + cur_pos
+            #self.state = [count] + tree_states + list(np.ndarray.flatten(np.array(valid_action_areas))) + cur_pos
             self.state = [count] + tree_states + cur_pos
             self.start_position = cur_pos
             # agent choice

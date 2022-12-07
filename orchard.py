@@ -215,7 +215,7 @@ class OrchardMap():
                 combined_revealed = np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
                 # G = %Complete + %Revealed - DistanceTravelled/4
                 global_r2 = (((self.picked_apples+self.pruned_trees) / (n1+n2))
-                             * 100) + ((((combined-combined_revealed)) / combined)*100) - (path_distance/4)
+                             * 100)
                 return global_r2, tree_finished
         else:
             # if we move we change our previous location back to the original and update our id location
@@ -232,7 +232,7 @@ class OrchardMap():
                 # G = %Complete + %Revealed - DistanceTravelled/4
                 combined_revealed = np.sum(self.orchard_map == 3) + np.sum(self.orchard_map == 4)
                 global_r2 = (((self.picked_apples+self.pruned_trees) / (n1+n2))
-                             * 100) + ((((combined-combined_revealed)) / combined)*100) - (path_distance/4)
+                             * 100)
                 return global_r2, True
             else:
                 return None, False
@@ -508,10 +508,10 @@ class OrchardSim():
                         # CHANGE REWARD SCHEME HERE
                         # reward, tree_finished = self.map.update_map_local(
                         #     i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
-                        reward, tree_finished = self.map.update_map_diff(
-                            i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
-                        # reward, tree_finished = self.map.update_map_global(
+                        # reward, tree_finished = self.map.update_map_diff(
                         #     i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
+                        reward, tree_finished = self.map.update_map_global(
+                            i.cur_pose, move, key, i.id, i.action_type, i.goal_position, i.goal_distance, i.start_position)
 
                         # if we interacted dont update pose
                         if key != "interact":
@@ -528,7 +528,7 @@ class OrchardSim():
                                 if reward > 0 and tree_finished == False:
                                     other_state = self.map.get_prune_tree_state()
                                 tree_state, count = self.map.get_apple_tree_state()
-                            #update and train
+                            # update and train
                             i.update_next_state_path(tree_state, count)
                             i.update_buffer(reward)
                             i.policy.train()
@@ -538,12 +538,13 @@ class OrchardSim():
 
                     if tsteps >= self.tsep_max or self.map.check_complete():
                         print("EPISODE : " + str(eps) + " COMPLETE")
+                        print("EPSILON: ", self.agents[0].epsilon)
                         # if we are at max episode then quit
                         if eps >= self.ep_max:
                             # VISUALIZE HERE
                             self.map.reset_map(self.agents)
-                            self.render = pygame_render.PygameRender(self.map)
-                            self.render.start(self.agents, self.ep_max, self.tsep_max)
+                            # self.render = pygame_render.PygameRender(self.map)
+                            # self.render.start(self.agents, self.ep_max, self.tsep_max)
                             return
                         # reset tsteps
                         tsteps = 0
